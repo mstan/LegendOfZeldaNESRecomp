@@ -1,0 +1,11 @@
+build/
+*.nes
+*.bin
+*.sav
+*.log
+banks/
+ghidra/
+.mcp.json
+
+# DO NOT ignore generated/ — committed for reproducibility
+# Old prefix files (Zelda_#_NES_*.c) should be deleted manually
