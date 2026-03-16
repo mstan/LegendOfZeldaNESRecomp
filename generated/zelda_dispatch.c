@@ -1856,6 +1856,7 @@ void call_by_address(uint16_t addr) {
                 case 3: func_BFAC_b3(); break;
                 case 4: func_BFAC_b4(); break;
                 case 6: func_BFAC_b6(); break;
+                case 5: func_BFAC_b5(); break;
                 default: nes_log_dispatch_miss(addr); break;
             }
             break;
@@ -1868,6 +1869,7 @@ void call_by_address(uint16_t addr) {
                 case 3: func_BF98_b3(); break;
                 case 4: func_BF98_b4(); break;
                 case 6: func_BF98_b6(); break;
+                case 5: func_BF98_b5(); break;
                 default: nes_log_dispatch_miss(addr); break;
             }
             break;
@@ -9698,6 +9700,10 @@ void call_by_address(uint16_t addr) {
             func_B65A_b5(); break;
         case 0xB6C4:
             func_B6C4_b5(); break;
+        case 0xE6B8:
+            func_E6B8(); break;
+        case 0xE6A1:
+            func_E6A1(); break;
         default:
             nes_log_dispatch_miss(addr);
             break;

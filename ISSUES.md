@@ -2,10 +2,10 @@
 
 ## Gameplay
 
-### Black overworld background (no map tiles)
-When starting a new game, the overworld terrain/map tiles are completely absent. The nametable game area (rows 8-29) contains only blank tiles ($24). CHR RAM is populated and attributes are correct, so the issue is in the room data decompression path. The room loading state machine completes normally ($12: 3->4->5) and the room number is correct ($EB = 0x77), but tile data never reaches the nametable.
+### ~~Black overworld background (no map tiles)~~ FIXED
+**Root cause:** SRAM-sourced functions bank-switch at runtime, but the code generator hardcoded JSR/JMP calls to bank 1 (the source bank) instead of dispatching dynamically via `call_by_address()`. Room decompression code switched to bank 5 but then called bank 1 versions of utility functions, so column data never reached the PPU buffer.
 
-The room loading code runs from SRAM via dispatch override (extras.c). Decompression functions in bank 1 ($A6A6, $A661, $B0F5, $B1F8, etc.) are being called, but the decompressed data isn't making it to PPU nametable writes.
+**Fix:** Modified `code_generator.c` to detect SRAM-sourced functions via `is_sram_sourced()` and emit `call_by_address()` for switchable-range targets. Added `extra_func` entries for `$BFAC`/`$BF98` in banks 0-6 to `game.cfg`.
 
 ### Link sprite is only a head facing up
 When gameplay starts, Link's sprite appears as just his head facing upward. No full body or animation.
