@@ -22,6 +22,7 @@ target_include_directories(LegendOfZeldaRecomp PRIVATE
     ${SDL2_INCLUDE_DIRS}
 )
 
+target_compile_definitions(LegendOfZeldaRecomp PRIVATE SDL_MAIN_HANDLED)
 target_link_libraries(LegendOfZeldaRecomp PRIVATE ${SDL2_LIBRARIES})
 
 if(WIN32)

@@ -34,3 +34,30 @@ int game_handle_arg(const char *key, const char *val) {
 const char *game_arg_usage(void) {
     return NULL;
 }
+
+/*
+ * SRAM code dispatch override.
+ *
+ * During init, Zelda copies ROM bank 1 $A500 → SRAM $6C90 (~4720 bytes).
+ * The game then calls subroutines in SRAM for save file management,
+ * because the routines need to bank-switch the ROM window while running.
+ *
+ * In our static recompilation, bank switching is just a pointer change,
+ * so we redirect SRAM calls to the original ROM source in bank 1.
+ */
+static int s_sram_log_count = 0;
+int game_dispatch_override(uint16_t addr) {
+    if (addr >= 0x6C90 && addr < 0x8000) {
+        int save_bank = g_current_bank;
+        uint16_t rom_addr = 0xA500 + (addr - 0x6C90);
+        if (s_sram_log_count < 200) {
+            printf("[SRAM] $%04X -> ROM $%04X (bank was %d)\n", addr, rom_addr, save_bank);
+            s_sram_log_count++;
+        }
+        g_current_bank = 1;
+        call_by_address(rom_addr);
+        g_current_bank = save_bank;
+        return 1;
+    }
+    return 0;
+}
