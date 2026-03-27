@@ -3,9 +3,11 @@ build/
 *.bin
 *.sav
 *.log
+*.zip
 banks/
 ghidra/
 .mcp.json
+debug.ini
 
 # DO NOT ignore generated/ — committed for reproducibility
 # Old prefix files (Zelda_#_NES_*.c) should be deleted manually
