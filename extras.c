@@ -282,3 +282,41 @@ int game_dispatch_override(uint16_t addr) {
 uint8_t game_ram_read_hook(uint16_t pc, uint16_t addr, uint8_t val) {
     (void)pc; (void)addr; return val;
 }
+
+/* ---- Debug server hooks (shared debug_server in nesrecomp runner) ---- */
+
+void game_fill_frame_record(void *record) {
+    NESFrameRecord *r = (NESFrameRecord *)record;
+    r->game_data[0] = g_ram[0x12];    /* GameMode */
+    r->game_data[1] = g_ram[0xEB];    /* CurrentRoom */
+    r->game_data[2] = g_ram[0x0070];  /* Link_X */
+    r->game_data[3] = g_ram[0x0084];  /* Link_Y */
+    r->game_data[4] = g_ram[0x066F];  /* Hearts/HP */
+    r->game_data[5] = g_ram[0x0657];  /* Sword */
+}
+
+int game_handle_debug_cmd(const char *cmd, int id, const char *json) {
+    (void)json;
+    if (strcmp(cmd, "zelda_state") == 0) {
+        debug_server_send_fmt(
+            "{\"id\":%d,\"game_mode\":%d,\"room\":%d,"
+            "\"link_x\":%d,\"link_y\":%d,\"hp\":%d,"
+            "\"sword\":%d,\"sub_mode\":%d}\n",
+            id,
+            g_ram[0x12],   /* GameMode */
+            g_ram[0xEB],   /* CurrentRoom */
+            g_ram[0x0070], /* Link_X */
+            g_ram[0x0084], /* Link_Y */
+            g_ram[0x066F], /* Hearts/HP */
+            g_ram[0x0657], /* Sword */
+            g_ram[0x13]    /* SubMode */
+        );
+        return 1;
+    }
+    return 0;
+}
+
+/* ---- Watchdog globals (read by debug_server watchdog_status command) ---- */
+int g_watchdog_triggered = 0;
+uint64_t g_watchdog_frame = 0;
+char g_watchdog_stack_dump[1024] = "";
