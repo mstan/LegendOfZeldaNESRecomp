@@ -13,6 +13,7 @@
 #include "debug_server.h"
 #include "verify_mode.h"
 #include "input_script.h"
+#include "recomp_stack.h"
 #ifdef ENABLE_NESTOPIA_ORACLE
 #include "nestopia_bridge.h"
 #endif
@@ -65,8 +66,28 @@ uint32_t game_get_expected_crc32(void) { return 0x3FE272FBu; }
 
 const char *game_get_name(void) { return "The Legend of Zelda"; }
 
+/* Write breakpoint callback: log stack when ObjTimer[1] ($0029) is written */
+static void on_timer1_write(uint16_t addr, uint8_t old_val, uint8_t new_val) {
+    (void)addr;
+    if (old_val == new_val) return;  /* skip no-change writes */
+    /* Only log interesting transitions (timer set to large values or 0→nonzero) */
+    if (new_val > 10 || (old_val == 0 && new_val != 0)) {
+        fprintf(stderr, "[WBP] $%04X: $%02X -> $%02X  X=%d  frame=%llu  stack:",
+                addr, old_val, new_val, g_cpu.X,
+                (unsigned long long)g_frame_count);
+        for (int i = g_recomp_stack_top - 1; i >= 0 && i >= g_recomp_stack_top - 6; i--)
+            fprintf(stderr, " %s", g_recomp_stack[i]);
+        fprintf(stderr, "\n");
+    }
+}
+
 void game_on_init(void) {
     s_debug_enabled = check_debug_ini();
+
+    /* Set write breakpoint on ObjTimer[1] = $0029 */
+    g_write_bp_addr = 0x0029;
+    g_write_bp_match_val = 0xFF;  /* any value */
+    g_write_bp_callback = on_timer1_write;
 
     if (s_debug_enabled) {
         printf("[Debug] debug.ini found -- TCP server and verify mode enabled\n");
@@ -84,19 +105,23 @@ void game_on_init(void) {
     }
 }
 
-/* Dump the 10 entity slots: type, X, Y at $0300/$0380/$0390 */
+/* Dump entity slots using correct addresses from disassembly:
+ * ObjType=$034F  ObjX=$0070  ObjY=$0084  ObjDir=$0098
+ * ObjState=$00AC  ObjMetastate=$0405  ObjUninitialized=$0492 */
 static void dump_entities(uint64_t frame_count, const char *label) {
     printf("[%s] frame=%llu entity slots:\n", label, (unsigned long long)frame_count);
-    for (int i = 0; i < 10; i++) {
-        uint8_t type = g_ram[0x300 + i];
-        uint8_t x    = g_ram[0x380 + i];
-        uint8_t y    = g_ram[0x390 + i];
-        if (type != 0)
-            printf("  slot%d type=$%02X x=%d y=%d\n", i, type, x, y);
+    for (int i = 0; i < 12; i++) {
+        uint8_t type  = g_ram[0x34F + i];
+        uint8_t x     = g_ram[0x70  + i];
+        uint8_t y     = g_ram[0x84  + i];
+        uint8_t state = g_ram[0xAC  + i];
+        uint8_t meta  = g_ram[0x405 + i];
+        uint8_t uninit= g_ram[0x492 + i];
+        if (type != 0 || meta != 0)
+            printf("  slot%d type=$%02X x=$%02X y=$%02X st=$%02X meta=$%02X uninit=$%02X\n",
+                   i, type, x, y, state, meta, uninit);
     }
-    /* Also log $03F8 and $0394 used by sub-mode 8 */
-    printf("  $0394=$%02X $03F8=$%02X $0F=$%02X\n",
-           g_ram[0x394], g_ram[0x3F8], g_ram[0x0F]);
+    printf("  GameMode=$%02X Sub=$%02X\n", g_ram[0x12], g_ram[0x11]);
 }
 
 void game_on_frame(uint64_t frame_count) {
@@ -287,16 +312,32 @@ uint8_t game_ram_read_hook(uint16_t pc, uint16_t addr, uint8_t val) {
 
 void game_fill_frame_record(void *record) {
     NESFrameRecord *r = (NESFrameRecord *)record;
-    r->game_data[0] = g_ram[0x12];    /* GameMode */
-    r->game_data[1] = g_ram[0xEB];    /* CurrentRoom */
-    r->game_data[2] = g_ram[0x0070];  /* Link_X */
-    r->game_data[3] = g_ram[0x0084];  /* Link_Y */
-    r->game_data[4] = g_ram[0x066F];  /* Hearts/HP */
-    r->game_data[5] = g_ram[0x0657];  /* Sword */
+    r->game_data[0]  = g_ram[0x12];    /* GameMode */
+    r->game_data[1]  = g_ram[0xEB];    /* CurrentRoom */
+    r->game_data[2]  = g_ram[0x0070];  /* Link_X (slot 0) */
+    r->game_data[3]  = g_ram[0x0084];  /* Link_Y (slot 0) */
+    /* Entity slot 1 diagnostics (first enemy slot) */
+    r->game_data[4]  = g_ram[0x350];   /* ObjType[1]  ($34F+1) */
+    r->game_data[5]  = g_ram[0x406];   /* ObjMetastate[1] ($405+1) */
+    r->game_data[6]  = g_ram[0x29];    /* ObjTimer[1] ($28+1) */
+    r->game_data[7]  = g_ram[0x493];   /* ObjUninitialized[1] ($492+1) */
+    r->game_data[8]  = g_ram[0x71];    /* ObjX[1] ($70+1) */
+    r->game_data[9]  = g_ram[0x85];    /* ObjY[1] ($84+1) */
+    r->game_data[10] = g_ram[0xAD];    /* ObjState[1] ($AC+1) */
+    r->game_data[11] = g_ram[0x99];    /* ObjDir[1] ($98+1) */
+    /* Extra context */
+    r->game_data[12] = g_ram[0x26];    /* StunCycle ($26) */
+    r->game_data[13] = g_ram[0x11];    /* GameSubmode */
+    r->game_data[14] = g_ram[0x0F];    /* $0F (saved uninit flag during UpdateObject) */
+    r->game_data[15] = g_ram[0x0340];  /* CurObjIndex ($0340) */
 }
 
 int game_handle_debug_cmd(const char *cmd, int id, const char *json) {
     (void)json;
+    if (strcmp(cmd, "echo_cmd") == 0) {
+        debug_server_send_fmt("{\"id\":%d,\"echo\":\"%s\"}\n", id, cmd);
+        return 1;
+    }
     if (strcmp(cmd, "zelda_state") == 0) {
         debug_server_send_fmt(
             "{\"id\":%d,\"game_mode\":%d,\"room\":%d,"
@@ -310,6 +351,64 @@ int game_handle_debug_cmd(const char *cmd, int id, const char *json) {
             g_ram[0x066F], /* Hearts/HP */
             g_ram[0x0657], /* Sword */
             g_ram[0x13]    /* SubMode */
+        );
+        return 1;
+    }
+    /* entity_snapshot: dump all 12 entity slots with correct disasm addresses */
+    if (strcmp(cmd, "entity_snapshot") == 0) {
+        char buf[2048];
+        int pos = snprintf(buf, sizeof(buf),
+            "{\"id\":%d,\"frame\":%llu,\"mode\":%d,\"sub\":%d,\"slots\":[",
+            id, (unsigned long long)g_frame_count, g_ram[0x12], g_ram[0x11]);
+        for (int i = 0; i < 12; i++) {
+            if (i > 0) buf[pos++] = ',';
+            pos += snprintf(buf + pos, sizeof(buf) - pos,
+                "{\"i\":%d,\"type\":%d,\"x\":%d,\"y\":%d,"
+                "\"dir\":%d,\"state\":%d,\"meta\":%d,"
+                "\"timer\":%d,\"uninit\":%d}",
+                i,
+                g_ram[0x34F + i],  /* ObjType */
+                g_ram[0x70  + i],  /* ObjX */
+                g_ram[0x84  + i],  /* ObjY */
+                g_ram[0x98  + i],  /* ObjDir */
+                g_ram[0xAC  + i],  /* ObjState */
+                g_ram[0x405 + i],  /* ObjMetastate */
+                g_ram[0x28  + i],  /* ObjTimer */
+                g_ram[0x492 + i]   /* ObjUninitialized */
+            );
+        }
+        pos += snprintf(buf + pos, sizeof(buf) - pos, "]}\n");
+        debug_server_send_line(buf);
+        return 1;
+    }
+    /* entity_slot: detailed view of one slot with extra timing context
+     * Usage: {"cmd":"entity_slot","slot":1} */
+    if (strcmp(cmd, "entity_slot") == 0) {
+        int slot = 1;  /* default */
+        const char *sp = strstr(json, "\"slot\":");
+        if (sp) slot = atoi(sp + 7);
+        if (slot < 0 || slot > 11) slot = 1;
+        debug_server_send_fmt(
+            "{\"id\":%d,\"frame\":%llu,\"slot\":%d,"
+            "\"type\":\"0x%02X\",\"x\":%d,\"y\":%d,"
+            "\"dir\":%d,\"state\":\"0x%02X\",\"meta\":%d,"
+            "\"timer\":%d,\"uninit\":\"0x%02X\","
+            "\"stun_cycle\":%d,\"paused\":%d,\"menu_state\":%d,"
+            "\"mode\":%d,\"sub\":%d}\n",
+            id, (unsigned long long)g_frame_count, slot,
+            g_ram[0x34F + slot],
+            g_ram[0x70  + slot],
+            g_ram[0x84  + slot],
+            g_ram[0x98  + slot],
+            g_ram[0xAC  + slot],
+            g_ram[0x405 + slot],
+            g_ram[0x28  + slot],
+            g_ram[0x492 + slot],
+            g_ram[0x26],   /* StunCycle */
+            g_ram[0xE0],   /* Paused */
+            g_ram[0xE1],   /* MenuState */
+            g_ram[0x12],   /* GameMode */
+            g_ram[0x11]    /* GameSubmode */
         );
         return 1;
     }
