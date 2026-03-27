@@ -61,7 +61,7 @@ static void get_exe_relative_path(const char *filename, char *out, int max_len) 
 
 /* ---- game_extras.h implementation ---- */
 
-uint32_t game_get_expected_crc32(void) { return 0xD7AE93DFu; }
+uint32_t game_get_expected_crc32(void) { return 0x3FE272FBu; }
 
 const char *game_get_name(void) { return "The Legend of Zelda"; }
 
