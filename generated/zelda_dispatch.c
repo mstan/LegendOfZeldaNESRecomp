@@ -9990,6 +9990,8 @@ void call_by_address(uint16_t addr) {
             func_ACC6_b4(); break;
         case 0xACE4:
             func_ACE4_b4(); break;
+        case 0x8021:
+            func_8021_b5(); break;
         case 0x806C:
             func_806C_b5(); break;
         case 0xE6A1:

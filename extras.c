@@ -27,6 +27,35 @@
 #  include <windows.h>
 #endif
 
+/* ---- SRAM persistence ---- */
+static char s_sram_path[512] = "";
+static uint8_t s_sram_snapshot[0x2000]; /* last-saved snapshot for dirty check */
+static int s_sram_dirty = 0;
+
+static void sram_load(void) {
+    FILE *f = fopen(s_sram_path, "rb");
+    if (f) {
+        size_t n = fread(g_sram, 1, 0x2000, f);
+        fclose(f);
+        memcpy(s_sram_snapshot, g_sram, 0x2000);
+        printf("[SRAM] Loaded %zu bytes from %s\n", n, s_sram_path);
+    } else {
+        printf("[SRAM] No save file found, starting fresh\n");
+        memcpy(s_sram_snapshot, g_sram, 0x2000);
+    }
+}
+
+static void sram_save(void) {
+    if (memcmp(g_sram, s_sram_snapshot, 0x2000) == 0) return; /* not dirty */
+    FILE *f = fopen(s_sram_path, "wb");
+    if (f) {
+        fwrite(g_sram, 1, 0x2000, f);
+        fclose(f);
+        memcpy(s_sram_snapshot, g_sram, 0x2000);
+        printf("[SRAM] Saved to %s\n", s_sram_path);
+    }
+}
+
 /* ---- Debug mode ---- */
 static int s_debug_enabled = 0;
 static void get_exe_relative_path(const char *filename, char *out, int max_len);
@@ -82,6 +111,10 @@ static void on_timer1_write(uint16_t addr, uint8_t old_val, uint8_t new_val) {
 }
 
 void game_on_init(void) {
+    /* Load battery-backed SRAM from disk */
+    get_exe_relative_path("zelda.srm", s_sram_path, sizeof(s_sram_path));
+    sram_load();
+
     s_debug_enabled = check_debug_ini();
 
     /* Set write breakpoint on ObjTimer[1] = $0029 */
@@ -132,6 +165,9 @@ void game_on_frame(uint64_t frame_count) {
         if (ovr >= 0)
             g_controller1_buttons = (uint8_t)ovr;
     }
+
+    /* Persist SRAM to disk every second */
+    if ((frame_count % 60) == 0) sram_save();
 
     static uint8_t last_mode = 0xFF, last_sub = 0xFF;
     static int ob_sub_cycled = 0; /* did we see sub>0 in mode $0B? */
