@@ -3,25 +3,20 @@
 Static recompilation of The Legend of Zelda (NES) for native PC.
 Built with the [NESRecomp](https://github.com/mstan/nesrecomp) framework.
 
-> **Status: Work in progress.** The game boots, title screen and file select are functional, overworld renders and scrolls between screens, and enemies spawn. Many features are incomplete or broken — see Known Issues below.
+> **Status: Believed to be 100% playable.** Tested through the overworld and dungeon 7 without encountering issues. No known dispatch misses remain. If you find a bug, please open an issue.
+
+## Acknowledgments
+
+The complete dispatch function coverage was made possible by the [zelda1-disassembly](https://github.com/aldonunez/zelda1-disassembly) by Aldo Nunez. The disassembly's debug symbols were used to extract callable function addresses for the SRAM-mapped code region, closing the final dispatch gaps.
 
 ## What Works
 
-- Title screen, demo playback, and file select menu
-- Character creation / name entry (register mode)
-- Overworld rendering with room-to-room scrolling
-- Enemy spawning with correct metastate lifecycle (spawn clouds, movement)
-- HUD partially renders (life meter, minimap outline)
-- Basic Link movement and screen transitions
-
-## Known Issues
-
-- **Cave / dungeon entrance soft-locks** — entering a cave tile freezes the game. The entity spawning system for cave NPCs (old man, merchants) is incomplete.
-- **Screen transition artifacts** — new areas briefly render as all-zero tiles before the correct map data loads. PPU nametable update timing issue.
-- **Link sprite half-missing** — only the upper body renders on spawn. 8x16 sprite mode handling is incomplete.
-- **HUD counters garbled** — rupee/key/bomb counters display "DCE" instead of proper digits. Tile mapping issue.
-- **Fairy cursor garbled** — the file select fairy sprite is partially corrupted.
-- **No save persistence** — SRAM battery-backed saves are not implemented yet.
+- Overworld exploration with screen transitions
+- Dungeons, bosses, and items
+- Enemies and combat
+- Caves (old man, merchants, dungeon entrances)
+- Inventory / pause subscreen
+- Battery-backed save persistence (`zelda.srm` next to executable)
 
 ## Quick Start
 
@@ -38,6 +33,12 @@ Built with the [NESRecomp](https://github.com/mstan/nesrecomp) framework.
 | B          | X |
 | Start      | Enter |
 | Select     | Tab |
+
+| Hotkey | Action |
+|--------|--------|
+| F5     | Toggle turbo (fast-forward) |
+| F6     | Save state |
+| F7     | Load state |
 
 ## Building from Source
 
@@ -56,12 +57,11 @@ Place your `Legend of Zelda (USA).nes` ROM in the build directory or select it a
 
 This is a **static recompiler**, not an emulator. The original 6502 machine code is translated to C at build time, then compiled to native x64. The NES PPU, APU, and mapper are simulated by the runner library.
 
-- `game.cfg` — recompiler configuration (bank switch routine, inline dispatch tables, extra function seeds)
-- `extras.c` — game-specific hooks (SRAM dispatch override, debug server commands, entity diagnostics)
+- `game.cfg` — recompiler configuration (bank switch, inline dispatch, extra functions, extra labels)
+- `extras.c` — game-specific hooks (SRAM persistence, entity diagnostics)
 - `generated/` — auto-generated C code (do not edit manually)
 - `nesrecomp/` — framework submodule (recompiler + runner)
-- `tools/` — analysis and debug utilities
 
-## Debug Infrastructure
+## Known Limitations
 
-The game includes a TCP debug server (port 4370) with a 36000-frame ring buffer, enabled by placing a `debug.ini` file next to the executable. See `tools/dbg.py` for the query interface.
+- Audio is basic (APU register writes are captured but full audio mixing is work-in-progress)
