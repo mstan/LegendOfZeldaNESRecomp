@@ -1741,12 +1741,7 @@ void call_by_address(uint16_t addr) {
         case 0xA97F:
             func_A97F_b2(); break;
         case 0xA9F5:
-            switch (g_current_bank) {
-                case 2: func_A9F5_b2(); break;
-                case 6: func_A9F5_b6(); break;
-                default: nes_log_dispatch_miss(addr); break;
-            }
-            break;
+            func_A9F5_b2(); break;
         case 0xA9FF:
             switch (g_current_bank) {
                 case 2: func_A9FF_b2(); break;
@@ -2941,6 +2936,7 @@ void call_by_address(uint16_t addr) {
             switch (g_current_bank) {
                 case 1: func_A002_b1(); break;
                 case 4: func_A002_b4(); break;
+                case 5: func_A002_b5(); break;
                 case 6: func_A002_b6(); break;
                 default: nes_log_dispatch_miss(addr); break;
             }
@@ -3540,6 +3536,8 @@ void call_by_address(uint16_t addr) {
             func_F3CF(); break;
         case 0xFF01:
             func_FF01(); break;
+        case 0xFC01:
+            func_FC01(); break;
         case 0xFCC0:
             func_FCC0(); break;
         case 0xFCC1:
@@ -3708,6 +3706,8 @@ void call_by_address(uint16_t addr) {
             func_FF82(); break;
         case 0xFF83:
             func_FF83(); break;
+        case 0xDD03:
+            func_DD03(); break;
         case 0xFF20:
             func_FF20(); break;
         case 0xFF21:
@@ -4388,6 +4388,8 @@ void call_by_address(uint16_t addr) {
             func_C096(); break;
         case 0xF6C0:
             func_F6C0(); break;
+        case 0xE0AD:
+            func_E0AD(); break;
         case 0xF01F:
             func_F01F(); break;
         case 0xDA82:
@@ -4414,6 +4416,8 @@ void call_by_address(uint16_t addr) {
             func_FFBA(); break;
         case 0xFFBB:
             func_FFBB(); break;
+        case 0xD374:
+            func_D374(); break;
         case 0xD375:
             func_D375(); break;
         case 0xD912:
@@ -4938,6 +4942,8 @@ void call_by_address(uint16_t addr) {
             func_EEC0(); break;
         case 0xE85F:
             func_E85F(); break;
+        case 0xD3ED:
+            func_D3ED(); break;
         case 0xF601:
             func_F601(); break;
         case 0xF605:
@@ -5068,6 +5074,8 @@ void call_by_address(uint16_t addr) {
             func_C89B(); break;
         case 0xD452:
             func_D452(); break;
+        case 0xD453:
+            func_D453(); break;
         case 0xD4DE:
             func_D4DE(); break;
         case 0xC08E:
@@ -5096,8 +5104,12 @@ void call_by_address(uint16_t addr) {
             func_FEAB(); break;
         case 0xD002:
             func_D002(); break;
+        case 0xE060:
+            func_E060(); break;
         case 0xC11F:
             func_C11F(); break;
+        case 0xD09B:
+            func_D09B(); break;
         case 0xDB42:
             func_DB42(); break;
         case 0xEA55:
@@ -5158,6 +5170,8 @@ void call_by_address(uint16_t addr) {
             func_DAA9(); break;
         case 0xD442:
             func_D442(); break;
+        case 0xD443:
+            func_D443(); break;
         case 0xEA0B:
             func_EA0B(); break;
         case 0xD492:
@@ -5212,6 +5226,8 @@ void call_by_address(uint16_t addr) {
             func_FD10(); break;
         case 0xC401:
             func_C401(); break;
+        case 0xFBFF:
+            func_FBFF(); break;
         case 0xDAFB:
             func_DAFB(); break;
         case 0xDAFC:
@@ -5328,6 +5344,8 @@ void call_by_address(uint16_t addr) {
             func_D2BE(); break;
         case 0xECFE:
             func_ECFE(); break;
+        case 0xECFF:
+            func_ECFF(); break;
         case 0xED4D:
             func_ED4D(); break;
         case 0xED4E:
@@ -5342,6 +5360,8 @@ void call_by_address(uint16_t addr) {
             func_FAA8(); break;
         case 0xFEDC:
             func_FEDC(); break;
+        case 0xDE80:
+            func_DE80(); break;
         case 0xDE81:
             func_DE81(); break;
         case 0xECAE:
@@ -5420,6 +5440,8 @@ void call_by_address(uint16_t addr) {
             func_E867(); break;
         case 0xFE66:
             func_FE66(); break;
+        case 0xFE67:
+            func_FE67(); break;
         case 0xC468:
             func_C468(); break;
         case 0xDA68:
@@ -5546,6 +5568,8 @@ void call_by_address(uint16_t addr) {
             func_CA20(); break;
         case 0xC801:
             func_C801(); break;
+        case 0xC803:
+            func_C803(); break;
         case 0xF8A9:
             func_F8A9(); break;
         case 0xC8C9:
@@ -5604,8 +5628,12 @@ void call_by_address(uint16_t addr) {
             func_E5E3(); break;
         case 0xCE21:
             func_CE21(); break;
+        case 0xE6CF:
+            func_E6CF(); break;
         case 0xEBA5:
             func_EBA5(); break;
+        case 0xE70D:
+            func_E70D(); break;
         case 0xF630:
             func_F630(); break;
         case 0xF017:
@@ -5660,6 +5688,10 @@ void call_by_address(uint16_t addr) {
             func_E76B(); break;
         case 0xD006:
             func_D006(); break;
+        case 0xD007:
+            func_D007(); break;
+        case 0xE05A:
+            func_E05A(); break;
         case 0xE05B:
             func_E05B(); break;
         case 0xE6D1:
@@ -5840,6 +5872,8 @@ void call_by_address(uint16_t addr) {
             func_EBA6(); break;
         case 0xC9EB:
             func_C9EB(); break;
+        case 0xD05A:
+            func_D05A(); break;
         case 0xD05B:
             func_D05B(); break;
         case 0xF066:
@@ -6122,6 +6156,8 @@ void call_by_address(uint16_t addr) {
             func_D099(); break;
         case 0xD03E:
             func_D03E(); break;
+        case 0xDBD0:
+            func_DBD0(); break;
         case 0xDBD1:
             func_DBD1(); break;
         case 0xF8BE:
@@ -6300,6 +6336,8 @@ void call_by_address(uint16_t addr) {
             func_E538(); break;
         case 0xE539:
             func_E539(); break;
+        case 0xE8C9:
+            func_E8C9(); break;
         case 0xE8CA:
             func_E8CA(); break;
         case 0xD695:
@@ -6452,6 +6490,8 @@ void call_by_address(uint16_t addr) {
             func_F927(); break;
         case 0xD055:
             func_D055(); break;
+        case 0xC9A3:
+            func_C9A3(); break;
         case 0xE54C:
             func_E54C(); break;
         case 0xE54D:
@@ -6526,6 +6566,8 @@ void call_by_address(uint16_t addr) {
             func_E3E4(); break;
         case 0xE1E3:
             func_E1E3(); break;
+        case 0xE1E4:
+            func_E1E4(); break;
         case 0xF93F:
             func_F93F(); break;
         case 0xFAF9:
@@ -6622,6 +6664,8 @@ void call_by_address(uint16_t addr) {
             func_F01D(); break;
         case 0xC94E:
             func_C94E(); break;
+        case 0xC945:
+            func_C945(); break;
         case 0xF02E:
             func_F02E(); break;
         case 0xC942:
@@ -6688,6 +6732,8 @@ void call_by_address(uint16_t addr) {
             func_EE4D(); break;
         case 0xFC4D:
             func_FC4D(); break;
+        case 0xD94C:
+            func_D94C(); break;
         case 0xF0BE:
             func_F0BE(); break;
         case 0xDE04:
@@ -6952,8 +6998,6 @@ void call_by_address(uint16_t addr) {
             func_FA57(); break;
         case 0xF458:
             func_F458(); break;
-        case 0xC6D3:
-            func_C6D3(); break;
         case 0xEFAB:
             func_EFAB(); break;
         case 0xE8E2:
@@ -7019,7 +7063,13 @@ void call_by_address(uint16_t addr) {
         case 0xB3D7:
             func_B3D7_b1(); break;
         case 0x8400:
-            func_8400_b0(); break;
+            switch (g_current_bank) {
+                case 7: func_C400(); break;
+                case 0: func_8400_b0(); break;
+                case 6: func_8400_b6(); break;
+                default: nes_log_dispatch_miss(addr); break;
+            }
+            break;
         case 0x91D6:
             func_91D6_b0(); break;
         case 0x8420:
@@ -7093,8 +7143,15 @@ void call_by_address(uint16_t addr) {
             func_9F10_b4(); break;
         case 0x9F2C:
             func_9F2C_b4(); break;
-        case 0x9FDF:
-            func_9FDF_b6(); break;
+        case 0x9FEB:
+            func_9FEB_b6(); break;
+        case 0x9FED:
+            switch (g_current_bank) {
+                case 6: func_9FED_b6(); break;
+                case 4: func_9FED_b4(); break;
+                default: nes_log_dispatch_miss(addr); break;
+            }
+            break;
         case 0x8729:
             func_8729_b3(); break;
         case 0x9ADE:
@@ -7132,6 +7189,15 @@ void call_by_address(uint16_t addr) {
             func_925F_b0(); break;
         case 0x9451:
             func_9451_b0(); break;
+        case 0x9438:
+            func_9438_b5(); break;
+        case 0x9476:
+            switch (g_current_bank) {
+                case 5: func_9476_b5(); break;
+                case 2: func_9476_b2(); break;
+                default: nes_log_dispatch_miss(addr); break;
+            }
+            break;
         case 0xEEDC:
             func_EEDC(); break;
         case 0xD8DE:
@@ -7236,8 +7302,6 @@ void call_by_address(uint16_t addr) {
             func_A3C2_b1(); break;
         case 0xA3F3:
             func_A3F3_b2(); break;
-        case 0xA419:
-            func_A419_b4(); break;
         case 0xCAC5:
             func_CAC5(); break;
         case 0xC36F:
@@ -7921,8 +7985,6 @@ void call_by_address(uint16_t addr) {
             func_9392_b2(); break;
         case 0x93E9:
             func_93E9_b2(); break;
-        case 0x9476:
-            func_9476_b2(); break;
         case 0x8E24:
             switch (g_current_bank) {
                 case 2: func_8E24_b2(); break;
@@ -8015,8 +8077,6 @@ void call_by_address(uint16_t addr) {
             func_9DB3_b2(); break;
         case 0x98B0:
             func_98B0_b2(); break;
-        case 0xA004:
-            func_A004_b2(); break;
         case 0x99A9:
             switch (g_current_bank) {
                 case 2: func_99A9_b2(); break;
@@ -8228,12 +8288,7 @@ void call_by_address(uint16_t addr) {
         case 0xADC9:
             func_ADC9_b2(); break;
         case 0x9011:
-            switch (g_current_bank) {
-                case 2: func_9011_b2(); break;
-                case 4: func_9011_b4(); break;
-                default: nes_log_dispatch_miss(addr); break;
-            }
-            break;
+            func_9011_b2(); break;
         case 0x8491:
             func_8491_b2(); break;
         case 0xADAE:
@@ -8246,8 +8301,6 @@ void call_by_address(uint16_t addr) {
             func_AC2F_b2(); break;
         case 0xACF6:
             func_ACF6_b2(); break;
-        case 0xAC06:
-            func_AC06_b2(); break;
         case 0xA0AE:
             func_A0AE_b2(); break;
         case 0xAF55:
@@ -8255,13 +8308,25 @@ void call_by_address(uint16_t addr) {
         case 0x85B0:
             func_85B0_b2(); break;
         case 0xA221:
-            func_A221_b2(); break;
+            switch (g_current_bank) {
+                case 2: func_A221_b2(); break;
+                case 4: func_A221_b4(); break;
+                default: nes_log_dispatch_miss(addr); break;
+            }
+            break;
         case 0x9B99:
             func_9B99_b3(); break;
         case 0x9FDC:
             func_9FDC_b3(); break;
         case 0xA581:
             func_A581_b3(); break;
+        case 0x8021:
+            switch (g_current_bank) {
+                case 3: func_8021_b3(); break;
+                case 5: func_8021_b5(); break;
+                default: nes_log_dispatch_miss(addr); break;
+            }
+            break;
         case 0xA561:
             switch (g_current_bank) {
                 case 3: func_A561_b3(); break;
@@ -8295,6 +8360,8 @@ void call_by_address(uint16_t addr) {
             func_8F70_b3(); break;
         case 0x807D:
             func_807D_b3(); break;
+        case 0x8788:
+            func_8788_b3(); break;
         case 0x81EF:
             func_81EF_b3(); break;
         case 0x92B3:
@@ -8362,6 +8429,8 @@ void call_by_address(uint16_t addr) {
             func_90C1_b3(); break;
         case 0x8781:
             func_8781_b3(); break;
+        case 0x8988:
+            func_8988_b3(); break;
         case 0x8DC1:
             switch (g_current_bank) {
                 case 3: func_8DC1_b3(); break;
@@ -8418,8 +8487,6 @@ void call_by_address(uint16_t addr) {
             func_84A6_b4(); break;
         case 0xB012:
             func_B012_b4(); break;
-        case 0x951B:
-            func_951B_b4(); break;
         case 0xACF7:
             func_ACF7_b4(); break;
         case 0x9321:
@@ -8582,8 +8649,6 @@ void call_by_address(uint16_t addr) {
             func_A0BA_b4(); break;
         case 0x9514:
             func_9514_b4(); break;
-        case 0xABBA:
-            func_ABBA_b4(); break;
         case 0xA411:
             func_A411_b4(); break;
         case 0xB019:
@@ -8790,8 +8855,6 @@ void call_by_address(uint16_t addr) {
             func_A976_b5(); break;
         case 0xA5EA:
             func_A5EA_b5(); break;
-        case 0xB0DE:
-            func_B0DE_b5(); break;
         case 0xA571:
             switch (g_current_bank) {
                 case 5: func_A571_b5(); break;
@@ -8803,13 +8866,6 @@ void call_by_address(uint16_t addr) {
             func_A6F1_b5(); break;
         case 0x9E84:
             func_9E84_b5(); break;
-        case 0x98A5:
-            switch (g_current_bank) {
-                case 5: func_98A5_b5(); break;
-                case 4: func_98A5_b4(); break;
-                default: nes_log_dispatch_miss(addr); break;
-            }
-            break;
         case 0xB005:
             func_B005_b5(); break;
         case 0xA911:
@@ -8850,8 +8906,6 @@ void call_by_address(uint16_t addr) {
             func_B556_b5(); break;
         case 0xB576:
             func_B576_b5(); break;
-        case 0x9556:
-            func_9556_b5(); break;
         case 0x8987:
             func_8987_b5(); break;
         case 0x8F87:
@@ -8874,8 +8928,6 @@ void call_by_address(uint16_t addr) {
             func_8599_b5(); break;
         case 0x8540:
             func_8540_b5(); break;
-        case 0xA508:
-            func_A508_b5(); break;
         case 0xB786:
             func_B786_b5(); break;
         case 0xB102:
@@ -8898,6 +8950,8 @@ void call_by_address(uint16_t addr) {
             func_84E7_b5(); break;
         case 0x902F:
             func_902F_b5(); break;
+        case 0x95D1:
+            func_95D1_b5(); break;
         case 0xA98E:
             func_A98E_b5(); break;
         case 0x852D:
@@ -8910,8 +8964,8 @@ void call_by_address(uint16_t addr) {
             func_A805_b5(); break;
         case 0xA528:
             func_A528_b5(); break;
-        case 0x80DA:
-            func_80DA_b5(); break;
+        case 0xA7F0:
+            func_A7F0_b5(); break;
         case 0xB572:
             func_B572_b5(); break;
         case 0xB2DA:
@@ -8995,8 +9049,6 @@ void call_by_address(uint16_t addr) {
             func_B852_b5(); break;
         case 0xA8B8:
             func_A8B8_b5(); break;
-        case 0xB7B6:
-            func_B7B6_b5(); break;
         case 0x913A:
             func_913A_b5(); break;
         case 0x9159:
@@ -9081,8 +9133,6 @@ void call_by_address(uint16_t addr) {
             func_A989_b5(); break;
         case 0xA33E:
             func_A33E_b5(); break;
-        case 0x98A8:
-            func_98A8_b5(); break;
         case 0xA016:
             func_A016_b5(); break;
         case 0x9997:
@@ -9163,8 +9213,6 @@ void call_by_address(uint16_t addr) {
             func_94AD_b5(); break;
         case 0xA55C:
             func_A55C_b5(); break;
-        case 0xA86C:
-            func_A86C_b5(); break;
         case 0x84F0:
             func_84F0_b5(); break;
         case 0xA4B5:
@@ -9188,8 +9236,6 @@ void call_by_address(uint16_t addr) {
             func_B104_b5(); break;
         case 0xB099:
             func_B099_b5(); break;
-        case 0x9481:
-            func_9481_b5(); break;
         case 0xB698:
             func_B698_b5(); break;
         case 0xA91D:
@@ -9239,6 +9285,8 @@ void call_by_address(uint16_t addr) {
             func_A261_b6(); break;
         case 0x85F1:
             func_85F1_b6(); break;
+        case 0xA061:
+            func_A061_b6(); break;
         case 0xA3BA:
             func_A3BA_b6(); break;
         case 0x83B6:
@@ -9271,6 +9319,8 @@ void call_by_address(uint16_t addr) {
             func_A051_b6(); break;
         case 0x8446:
             func_8446_b6(); break;
+        case 0x8406:
+            func_8406_b6(); break;
         case 0x8509:
             func_8509_b6(); break;
         case 0x894E:
@@ -9281,6 +9331,8 @@ void call_by_address(uint16_t addr) {
             func_A6A3_b6(); break;
         case 0x921F:
             func_921F_b6(); break;
+        case 0x8433:
+            func_8433_b6(); break;
         case 0xA337:
             func_A337_b6(); break;
         case 0xA619:
@@ -9499,8 +9551,6 @@ void call_by_address(uint16_t addr) {
             func_A453_b2(); break;
         case 0x8563:
             func_8563_b2(); break;
-        case 0xAA8A:
-            func_AA8A_b2(); break;
         case 0xA050:
             func_A050_b2(); break;
         case 0xA54E:
@@ -9555,8 +9605,6 @@ void call_by_address(uint16_t addr) {
             func_B195_b4(); break;
         case 0x8305:
             func_8305_b4(); break;
-        case 0x956C:
-            func_956C_b4(); break;
         case 0x9E1D:
             func_9E1D_b4(); break;
         case 0xACDF:
@@ -9577,6 +9625,8 @@ void call_by_address(uint16_t addr) {
             func_A5A0_b4(); break;
         case 0xA643:
             func_A643_b4(); break;
+        case 0x98A5:
+            func_98A5_b4(); break;
         case 0x994E:
             func_994E_b4(); break;
         case 0x8190:
@@ -9589,6 +9639,8 @@ void call_by_address(uint16_t addr) {
             func_952B_b4(); break;
         case 0xB308:
             func_B308_b4(); break;
+        case 0x956C:
+            func_956C_b4(); break;
         case 0x867B:
             func_867B_b4(); break;
         case 0x85BB:
@@ -9779,13 +9831,6 @@ void call_by_address(uint16_t addr) {
             func_FFFE(); break;
         case 0x9F2E:
             func_9F2E_b4(); break;
-        case 0x9FED:
-            switch (g_current_bank) {
-                case 4: func_9FED_b4(); break;
-                case 6: func_9FED_b6(); break;
-                default: nes_log_dispatch_miss(addr); break;
-            }
-            break;
         case 0xA035:
             func_A035_b4(); break;
         case 0x9FFD:
@@ -9812,6 +9857,8 @@ void call_by_address(uint16_t addr) {
             func_A422_b4(); break;
         case 0xA3AD:
             func_A3AD_b4(); break;
+        case 0xA419:
+            func_A419_b4(); break;
         case 0xA4AC:
             func_A4AC_b4(); break;
         case 0xA4BA:
@@ -9856,10 +9903,6 @@ void call_by_address(uint16_t addr) {
             func_819C_b5(); break;
         case 0x88F9:
             func_88F9_b5(); break;
-        case 0x9531:
-            func_9531_b5(); break;
-        case 0x9533:
-            func_9533_b5(); break;
         case 0xA3FE:
             func_A3FE_b5(); break;
         case 0x8FCD:
@@ -9902,8 +9945,6 @@ void call_by_address(uint16_t addr) {
             func_B6D1_b5(); break;
         case 0xB6EE:
             func_B6EE_b5(); break;
-        case 0xA9A8:
-            func_A9A8_b6(); break;
         case 0xC469:
             func_C469(); break;
         case 0xC287:
@@ -9968,6 +10009,12 @@ void call_by_address(uint16_t addr) {
             func_B6C4_b5(); break;
         case 0xE6B8:
             func_E6B8(); break;
+        case 0xEEDE:
+            func_EEDE(); break;
+        case 0xEEFE:
+            func_EEFE(); break;
+        case 0x8300:
+            func_8300_b0(); break;
         case 0xB3F9:
             func_B3F9_b1(); break;
         case 0x8204:
@@ -9990,8 +10037,6 @@ void call_by_address(uint16_t addr) {
             func_ACC6_b4(); break;
         case 0xACE4:
             func_ACE4_b4(); break;
-        case 0x8021:
-            func_8021_b5(); break;
         case 0x806C:
             func_806C_b5(); break;
         case 0xE6A1:

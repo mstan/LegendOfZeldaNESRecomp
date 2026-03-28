@@ -1,0 +1,364 @@
+# game.toml — The Legend of Zelda (NES, Mapper 1 / MMC1, 8 PRG banks, CHR RAM)
+
+[game]
+output_prefix = "zelda"
+
+# ── Bank switch routine at $FFAC ─────────────────────────────────────────────
+[mapper]
+bank_switch = [0xFFAC]
+
+# ── Inline dispatch ──────────────────────────────────────────────────────────
+# $E5E2: ASL A; TAY; PLA×2 (return addr); LDA ($00),Y ×2; JMP ($0002)
+[[inline_dispatch]]
+addr = 0xE5E2
+
+# ── SRAM code mapping ────────────────────────────────────────────────────────
+# Zelda copies bank 1 ROM $A500→SRAM $6C90 during init (~$1370 bytes).
+[[sram_map]]
+sram_start = 0x6C90
+rom_start = 0xA500
+bank = 1
+size = 0x1370
+
+# ── Disassembly-sourced dispatch targets ─────────────────────────────────────
+# Extracted from aldonunez/zelda1-disassembly by scanning all JSR TableJump
+# ($E5E2) call sites and reading their inline address tables.
+
+[functions]
+fixed = [
+    # Mode init/update dispatch, trampoline stubs
+    0xC8C2, 0xCA77, 0xCC77, 0xD0C2, 0xE220, 0xE6B8,
+    0xE94B, 0xE96F, 0xE977, 0xE9A1, 0xE9C3, 0xE9CB, 0xE9D8, 0xE9F7,
+    0xEA11, 0xEA20, 0xEA6B, 0xEB62, 0xEB76, 0xEB7E, 0xEB86, 0xEB8E,
+    0xEB96, 0xEBA4, 0xEBAA, 0xEBC0, 0xEC1B, 0xEEDE, 0xEEFE,
+    0xEF71, 0xF0B1, 0xF1AF, 0xF1C3, 0xF1D0, 0xF1DA,
+    0xF519, 0xF5A5, 0xF720, 0xF8A5, 0xFC94, 0xFD00,
+    0xFE40, 0xFE48, 0xFE50, 0xFE58, 0xFE60, 0xFE68, 0xFE70, 0xFE78,
+    0xFE80, 0xFE88, 0xFE90, 0xFEA6, 0xFED1, 0xFED6, 0xFEDA, 0xFEF4,
+    0xFFA0,
+]
+
+# SRAM dynamic dispatch targets — utility routines in every switchable bank
+bank0 = [0x8300, 0xBFAC, 0xBF98]
+bank1 = [0xA69D, 0xB3F9, 0xBFAC, 0xBF98]
+bank2 = [0xBFAC, 0xBF98]
+bank3 = [0xBFAC, 0xBF98]
+bank4 = [
+    0xBFAC, 0xBF98,
+    # Enemy AI / object update dispatch targets
+    0x804F, 0x81F7, 0x8204, 0x8263, 0x8289, 0x82D7, 0x8399, 0x843E,
+    0x8481, 0x84B3, 0x84CB, 0x84EC, 0x84F9, 0x8568, 0x8798, 0x87BF,
+    0x87CC, 0x883F, 0x8886, 0x88F8, 0x8A65, 0x8B09, 0x8BFF, 0x8C6B,
+    0x8D50, 0x8D90, 0x8E44, 0x8EEB, 0x8F0E, 0x8F76, 0x8FEF, 0x9028,
+    0x90E4, 0x92D6, 0x9377, 0x9498, 0x95F0, 0x98A9, 0x9B36, 0x9B4B,
+    0x9BA2, 0x9CC9, 0x9D57, 0x9FA9, 0xA187, 0xA316, 0xA477, 0xA4DE,
+    0xA987, 0xA9D8, 0xA9EB, 0xAB66, 0xABBC, 0xABDA, 0xAC7D, 0xAC89,
+    0xACC6, 0xACE4,
+]
+bank5 = [0xBFAC, 0xBF98, 0x8021, 0x806C, 0x8070, 0x819A]
+bank6 = [0xBFAC, 0xBF98]
+
+# ── SRAM secondary entry points (ROM-translated) ────────────────────────────
+[[extra_label]]
+addr = 0xA500
+bank = 1
+[[extra_label]]
+addr = 0xA570
+bank = 1
+[[extra_label]]
+addr = 0xA5C0
+bank = 1
+[[extra_label]]
+addr = 0xA5C5
+bank = 1
+[[extra_label]]
+addr = 0xA5D4
+bank = 1
+[[extra_label]]
+addr = 0xA5E5
+bank = 1
+[[extra_label]]
+addr = 0xA5EC
+bank = 1
+[[extra_label]]
+addr = 0xA5F0
+bank = 1
+[[extra_label]]
+addr = 0xA5F9
+bank = 1
+[[extra_label]]
+addr = 0xA627
+bank = 1
+[[extra_label]]
+addr = 0xA661
+bank = 1
+[[extra_label]]
+addr = 0xA680
+bank = 1
+[[extra_label]]
+addr = 0xA68D
+bank = 1
+[[extra_label]]
+addr = 0xA6A6
+bank = 1
+[[extra_label]]
+addr = 0xA6A9
+bank = 1
+[[extra_label]]
+addr = 0xA6B0
+bank = 1
+[[extra_label]]
+addr = 0xA6B6
+bank = 1
+[[extra_label]]
+addr = 0xA6C5
+bank = 1
+[[extra_label]]
+addr = 0xA6DE
+bank = 1
+[[extra_label]]
+addr = 0xA6E9
+bank = 1
+[[extra_label]]
+addr = 0xA759
+bank = 1
+[[extra_label]]
+addr = 0xA76B
+bank = 1
+[[extra_label]]
+addr = 0xA799
+bank = 1
+[[extra_label]]
+addr = 0xA7E3
+bank = 1
+[[extra_label]]
+addr = 0xA826
+bank = 1
+[[extra_label]]
+addr = 0xA828
+bank = 1
+[[extra_label]]
+addr = 0xA831
+bank = 1
+[[extra_label]]
+addr = 0xA858
+bank = 1
+[[extra_label]]
+addr = 0xA883
+bank = 1
+[[extra_label]]
+addr = 0xA88F
+bank = 1
+[[extra_label]]
+addr = 0xA891
+bank = 1
+[[extra_label]]
+addr = 0xA897
+bank = 1
+[[extra_label]]
+addr = 0xA8BA
+bank = 1
+[[extra_label]]
+addr = 0xA8DF
+bank = 1
+[[extra_label]]
+addr = 0xA91B
+bank = 1
+[[extra_label]]
+addr = 0xA933
+bank = 1
+[[extra_label]]
+addr = 0xA94D
+bank = 1
+[[extra_label]]
+addr = 0xA986
+bank = 1
+[[extra_label]]
+addr = 0xA98B
+bank = 1
+[[extra_label]]
+addr = 0xA98F
+bank = 1
+[[extra_label]]
+addr = 0xA9AC
+bank = 1
+[[extra_label]]
+addr = 0xA9BF
+bank = 1
+[[extra_label]]
+addr = 0xA9FA
+bank = 1
+[[extra_label]]
+addr = 0xA9FC
+bank = 1
+[[extra_label]]
+addr = 0xAA2B
+bank = 1
+[[extra_label]]
+addr = 0xAA4E
+bank = 1
+[[extra_label]]
+addr = 0xAAB0
+bank = 1
+[[extra_label]]
+addr = 0xAAB8
+bank = 1
+[[extra_label]]
+addr = 0xAAE4
+bank = 1
+[[extra_label]]
+addr = 0xAAE6
+bank = 1
+[[extra_label]]
+addr = 0xAAF0
+bank = 1
+[[extra_label]]
+addr = 0xAAF2
+bank = 1
+[[extra_label]]
+addr = 0xAAFC
+bank = 1
+[[extra_label]]
+addr = 0xAAFE
+bank = 1
+[[extra_label]]
+addr = 0xAB08
+bank = 1
+[[extra_label]]
+addr = 0xAB7C
+bank = 1
+[[extra_label]]
+addr = 0xAB84
+bank = 1
+[[extra_label]]
+addr = 0xAB98
+bank = 1
+[[extra_label]]
+addr = 0xABAF
+bank = 1
+[[extra_label]]
+addr = 0xABE0
+bank = 1
+[[extra_label]]
+addr = 0xACDC
+bank = 1
+[[extra_label]]
+addr = 0xAD13
+bank = 1
+[[extra_label]]
+addr = 0xAD1C
+bank = 1
+[[extra_label]]
+addr = 0xAD27
+bank = 1
+[[extra_label]]
+addr = 0xAD82
+bank = 1
+[[extra_label]]
+addr = 0xAD9F
+bank = 1
+[[extra_label]]
+addr = 0xADE0
+bank = 1
+[[extra_label]]
+addr = 0xB044
+bank = 1
+[[extra_label]]
+addr = 0xB04B
+bank = 1
+[[extra_label]]
+addr = 0xB04F
+bank = 1
+[[extra_label]]
+addr = 0xB056
+bank = 1
+[[extra_label]]
+addr = 0xB057
+bank = 1
+[[extra_label]]
+addr = 0xB0F5
+bank = 1
+[[extra_label]]
+addr = 0xB17C
+bank = 1
+[[extra_label]]
+addr = 0xB185
+bank = 1
+[[extra_label]]
+addr = 0xB19C
+bank = 1
+[[extra_label]]
+addr = 0xB1F6
+bank = 1
+[[extra_label]]
+addr = 0xB1F8
+bank = 1
+[[extra_label]]
+addr = 0xB1FD
+bank = 1
+[[extra_label]]
+addr = 0xB201
+bank = 1
+[[extra_label]]
+addr = 0xB215
+bank = 1
+[[extra_label]]
+addr = 0xB23A
+bank = 1
+[[extra_label]]
+addr = 0xB240
+bank = 1
+[[extra_label]]
+addr = 0xB29D
+bank = 1
+[[extra_label]]
+addr = 0xB317
+bank = 1
+[[extra_label]]
+addr = 0xB335
+bank = 1
+[[extra_label]]
+addr = 0xB432
+bank = 1
+[[extra_label]]
+addr = 0xB486
+bank = 1
+[[extra_label]]
+addr = 0xB4C4
+bank = 1
+[[extra_label]]
+addr = 0xB506
+bank = 1
+[[extra_label]]
+addr = 0xB50D
+bank = 1
+[[extra_label]]
+addr = 0xB54C
+bank = 1
+[[extra_label]]
+addr = 0xB599
+bank = 1
+[[extra_label]]
+addr = 0xB5CF
+bank = 1
+[[extra_label]]
+addr = 0xB5F6
+bank = 1
+[[extra_label]]
+addr = 0xB635
+bank = 1
+[[extra_label]]
+addr = 0xB63B
+bank = 1
+[[extra_label]]
+addr = 0xB641
+bank = 1
+[[extra_label]]
+addr = 0xB66B
+bank = 1
+[[extra_label]]
+addr = 0xB66F
+bank = 1
+[[extra_label]]
+addr = 0xB696
+bank = 1
