@@ -94,8 +94,6 @@ void call_by_address(uint16_t addr) {
             func_8D00_b1(); break;
         case 0x808C:
             func_808C_b6(); break;
-        case 0xE5E2:
-            func_E5E2(); break;
         case 0xE94B:
             func_E94B(); break;
         case 0xE96F:
@@ -5624,6 +5622,8 @@ void call_by_address(uint16_t addr) {
             func_F621(); break;
         case 0xE785:
             func_E785(); break;
+        case 0xE5E2:
+            func_E5E2(); break;
         case 0xE5E3:
             func_E5E3(); break;
         case 0xCE21:
