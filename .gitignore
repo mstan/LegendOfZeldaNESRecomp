@@ -11,3 +11,8 @@ debug.ini
 *.cht
 disasm_ref/
 tmp_*.py
+
+# nesrecomp/ is a Windows directory junction → F:/Projects/nesrecomp.
+# Not tracked in this repo. Pinned SHA recorded in nesrecomp.pin and
+# enforced at CMake configure time.
+nesrecomp
