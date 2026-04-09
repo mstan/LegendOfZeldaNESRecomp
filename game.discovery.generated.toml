@@ -1,0 +1,538 @@
+# AUTO-GENERATED best-effort proposal.
+# Review before adopting as game.toml.
+# Generated only because no game.toml was supplied or found.
+
+[game]
+output_prefix = "zelda"
+
+[functions]
+fixed = [
+    0xE440, 0xF8A5, 0xCA77, 0xD0C2, 0xCC77, 0xC8C2, 0xEBA4, 0xEA20,
+    0xF9E5, 0xFE40, 0xFE50, 0xFE90, 0xFE60, 0xFE80, 0xFE88, 0xFEA6,
+    0xFEF4, 0xFEDA, 0xFECA, 0xFED6, 0xFE48, 0xFE78, 0xFE58, 0xFE68,
+    0xFE70, 0xFED1, 0xF213, 0xFFA0
+]
+
+[[extra_label]]
+addr = 0xA500
+bank = 1
+
+[[extra_label]]
+addr = 0xAA4E
+bank = 1
+
+[[extra_label]]
+addr = 0xA891
+bank = 1
+
+[[extra_label]]
+addr = 0xAD82
+bank = 1
+
+[[extra_label]]
+addr = 0xAD27
+bank = 1
+
+[[extra_label]]
+addr = 0xA883
+bank = 1
+
+[[extra_label]]
+addr = 0xA6B0
+bank = 1
+
+[[extra_label]]
+addr = 0xA627
+bank = 1
+
+[[extra_label]]
+addr = 0xA88F
+bank = 1
+
+[[extra_label]]
+addr = 0xA570
+bank = 1
+
+[[extra_label]]
+addr = 0xA759
+bank = 1
+
+[[extra_label]]
+addr = 0xAB84
+bank = 1
+
+[[extra_label]]
+addr = 0xA5F0
+bank = 1
+
+[[extra_label]]
+addr = 0xA94D
+bank = 1
+
+[[extra_label]]
+addr = 0xA9BF
+bank = 1
+
+[[extra_label]]
+addr = 0xA98B
+bank = 1
+
+[[extra_label]]
+addr = 0xA986
+bank = 1
+
+[[extra_label]]
+addr = 0xA6B6
+bank = 1
+
+[[extra_label]]
+addr = 0xB17C
+bank = 1
+
+[[extra_label]]
+addr = 0xAAE6
+bank = 1
+
+[[extra_label]]
+addr = 0xA5F9
+bank = 1
+
+[[extra_label]]
+addr = 0xA530
+bank = 1
+
+[[extra_label]]
+addr = 0xB074
+bank = 1
+
+[[extra_label]]
+addr = 0xA68D
+bank = 1
+
+[[extra_label]]
+addr = 0xAAB8
+bank = 1
+
+[[extra_label]]
+addr = 0xB044
+bank = 1
+
+[[extra_label]]
+addr = 0xB240
+bank = 1
+
+[[extra_label]]
+addr = 0xAA5D
+bank = 1
+
+[[extra_label]]
+addr = 0xB1F8
+bank = 1
+
+[[extra_label]]
+addr = 0xB19C
+bank = 1
+
+[[extra_label]]
+addr = 0xADE0
+bank = 1
+
+[[extra_label]]
+addr = 0xAAE4
+bank = 1
+
+[[extra_label]]
+addr = 0xA76B
+bank = 1
+
+[[extra_label]]
+addr = 0xA826
+bank = 1
+
+[[extra_label]]
+addr = 0xA828
+bank = 1
+
+[[extra_label]]
+addr = 0xA858
+bank = 1
+
+[[extra_label]]
+addr = 0xA831
+bank = 1
+
+[[extra_label]]
+addr = 0xB057
+bank = 1
+
+[[extra_label]]
+addr = 0xA897
+bank = 1
+
+[[extra_label]]
+addr = 0xB185
+bank = 1
+
+[[extra_label]]
+addr = 0xA8BA
+bank = 1
+
+[[extra_label]]
+addr = 0xA8DF
+bank = 1
+
+[[extra_label]]
+addr = 0xA91B
+bank = 1
+
+[[extra_label]]
+addr = 0xA680
+bank = 1
+
+[[extra_label]]
+addr = 0xB317
+bank = 1
+
+[[extra_label]]
+addr = 0xAAF2
+bank = 1
+
+[[extra_label]]
+addr = 0xAAF0
+bank = 1
+
+[[extra_label]]
+addr = 0xA6E9
+bank = 1
+
+[[extra_label]]
+addr = 0xA5C0
+bank = 1
+
+[[extra_label]]
+addr = 0xA5E5
+bank = 1
+
+[[extra_label]]
+addr = 0xA5C5
+bank = 1
+
+[[extra_label]]
+addr = 0xA5B6
+bank = 1
+
+[[extra_label]]
+addr = 0xA9AC
+bank = 1
+
+[[extra_label]]
+addr = 0xAA15
+bank = 1
+
+[[extra_label]]
+addr = 0xB0D8
+bank = 1
+
+[[extra_label]]
+addr = 0xB0BE
+bank = 1
+
+[[extra_label]]
+addr = 0xB0B6
+bank = 1
+
+[[extra_label]]
+addr = 0xA9FA
+bank = 1
+
+[[extra_label]]
+addr = 0xACDC
+bank = 1
+
+[[extra_label]]
+addr = 0xB1E9
+bank = 1
+
+[[extra_label]]
+addr = 0xA6A6
+bank = 1
+
+[[extra_label]]
+addr = 0xA6A9
+bank = 1
+
+[[extra_label]]
+addr = 0xB23A
+bank = 1
+
+[[extra_label]]
+addr = 0xAAB0
+bank = 1
+
+[[extra_label]]
+addr = 0xB1F6
+bank = 1
+
+[[extra_label]]
+addr = 0xB056
+bank = 1
+
+[[extra_label]]
+addr = 0xB66B
+bank = 1
+
+[[extra_label]]
+addr = 0xB696
+bank = 1
+
+[[extra_label]]
+addr = 0xB3BF
+bank = 1
+
+[[extra_label]]
+addr = 0xB0F5
+bank = 1
+
+[[extra_label]]
+addr = 0xA98F
+bank = 1
+
+[[extra_label]]
+addr = 0xA5EC
+bank = 1
+
+[[extra_label]]
+addr = 0xAA2B
+bank = 1
+
+[[extra_label]]
+addr = 0xAC7D
+bank = 1
+
+[[extra_label]]
+addr = 0xA9D8
+bank = 1
+
+[[extra_label]]
+addr = 0xAB66
+bank = 1
+
+[[extra_label]]
+addr = 0xA8CA
+bank = 1
+
+[[extra_label]]
+addr = 0xA92E
+bank = 1
+
+[[extra_label]]
+addr = 0xB04F
+bank = 1
+
+[[extra_label]]
+addr = 0xB29D
+bank = 1
+
+[[extra_label]]
+addr = 0xB432
+bank = 1
+
+[[extra_label]]
+addr = 0xB50D
+bank = 1
+
+[[extra_label]]
+addr = 0xB54C
+bank = 1
+
+[[extra_label]]
+addr = 0xB599
+bank = 1
+
+[[extra_label]]
+addr = 0xB5CF
+bank = 1
+
+[[extra_label]]
+addr = 0xAB7C
+bank = 1
+
+[[extra_label]]
+addr = 0xAD13
+bank = 1
+
+[[extra_label]]
+addr = 0xAD1C
+bank = 1
+
+[[extra_label]]
+addr = 0xAC25
+bank = 1
+
+[[extra_label]]
+addr = 0xB04B
+bank = 1
+
+[[extra_label]]
+addr = 0xAD9F
+bank = 1
+
+[[extra_label]]
+addr = 0xA799
+bank = 1
+
+[[extra_label]]
+addr = 0xA7E3
+bank = 1
+
+[[extra_label]]
+addr = 0xA933
+bank = 1
+
+[[extra_label]]
+addr = 0xAAFE
+bank = 1
+
+[[extra_label]]
+addr = 0xAB08
+bank = 1
+
+[[extra_label]]
+addr = 0xAAFC
+bank = 1
+
+[[extra_label]]
+addr = 0xA5D4
+bank = 1
+
+[[extra_label]]
+addr = 0xA6C5
+bank = 1
+
+[[extra_label]]
+addr = 0xABE0
+bank = 1
+
+[[extra_label]]
+addr = 0xAA4B
+bank = 1
+
+[[extra_label]]
+addr = 0xB22A
+bank = 1
+
+[[extra_label]]
+addr = 0xA6DE
+bank = 1
+
+[[extra_label]]
+addr = 0xADB9
+bank = 1
+
+[[extra_label]]
+addr = 0xB2F2
+bank = 1
+
+[[extra_label]]
+addr = 0xB66F
+bank = 1
+
+[[extra_label]]
+addr = 0xB635
+bank = 1
+
+[[extra_label]]
+addr = 0xB4C4
+bank = 1
+
+[[extra_label]]
+addr = 0xB5F6
+bank = 1
+
+[[extra_label]]
+addr = 0xB486
+bank = 1
+
+[[extra_label]]
+addr = 0xB5C3
+bank = 1
+
+[[extra_label]]
+addr = 0xB641
+bank = 1
+
+[[extra_label]]
+addr = 0xB61A
+bank = 1
+
+[[extra_label]]
+addr = 0xB63B
+bank = 1
+
+[[extra_label]]
+addr = 0xB668
+bank = 1
+
+[[extra_label]]
+addr = 0xB452
+bank = 1
+
+[[extra_label]]
+addr = 0xB5AC
+bank = 1
+
+[[extra_label]]
+addr = 0xA7DB
+bank = 1
+
+[[extra_label]]
+addr = 0xB522
+bank = 1
+
+[[extra_label]]
+addr = 0xA9FC
+bank = 1
+
+[[extra_label]]
+addr = 0xA900
+bank = 1
+
+[[extra_label]]
+addr = 0xB517
+bank = 1
+
+[[extra_label]]
+addr = 0xB506
+bank = 1
+
+[[extra_label]]
+addr = 0xB3D7
+bank = 1
+
+[[extra_label]]
+addr = 0xB201
+bank = 1
+
+[[extra_label]]
+addr = 0xABAF
+bank = 1
+
+[[extra_label]]
+addr = 0xB215
+bank = 1
+
+[[extra_label]]
+addr = 0xB1FD
+bank = 1
+
+[[extra_label]]
+addr = 0xB335
+bank = 1
+
+[[extra_label]]
+addr = 0xB21F
+bank = 1
+
+[[extra_label]]
+addr = 0xB077
+bank = 1

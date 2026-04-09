@@ -1,0 +1,89 @@
+# game.discovery.toml - Zelda validator helper config
+
+[game]
+output_prefix = "zelda"
+
+[mapper]
+bank_switch = [0xFFAC]
+
+[[inline_dispatch]]
+addr = 0xE5E2
+
+[[sram_map]]
+sram_start = 0x6C90
+rom_start = 0xA500
+bank = 1
+size = 0x1370
+
+# Conservative data-only ranges derived from aldonunez/zelda1-disassembly
+# linker segments in src/Z.cfg.
+[[data_region]]
+bank = 0
+start = 0x8000
+end = 0x8D60
+
+[[data_region]]
+bank = 0
+start = 0xBFFA
+end = 0xC000
+
+[[data_region]]
+bank = 1
+start = 0xBFFA
+end = 0xC000
+
+[[data_region]]
+bank = 2
+start = 0xBFFA
+end = 0xC000
+
+[[data_region]]
+bank = 3
+start = 0xBFFA
+end = 0xC000
+
+[[data_region]]
+bank = 4
+start = 0xBFFA
+end = 0xC000
+
+[[data_region]]
+bank = 5
+start = 0xBFFA
+end = 0xC000
+
+[[data_region]]
+bank = 6
+start = 0xA000
+end = 0xBF50
+
+[[data_region]]
+bank = 6
+start = 0xBFFA
+end = 0xC000
+
+[[data_region]]
+bank = 7
+start = 0xFAE4
+end = 0xFB86
+
+# Byte-validated from the Zelda ROM and disassembly as packed table data.
+[[data_region]]
+bank = 7
+start = 0xCB46
+end = 0xCBC0
+
+[[data_region]]
+bank = 7
+start = 0xCFFE
+end = 0xD060
+
+[[data_region]]
+bank = 7
+start = 0xFEE0
+end = 0xFEF4
+
+[[data_region]]
+bank = 7
+start = 0xFFEB
+end = 0xFFFF
