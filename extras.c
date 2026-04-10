@@ -368,6 +368,8 @@ void game_fill_frame_record(void *record) {
     r->game_data[15] = g_ram[0x0340];  /* CurObjIndex ($0340) */
 }
 
+void game_post_render(uint32_t *framebuf) { (void)framebuf; }
+
 int game_handle_debug_cmd(const char *cmd, int id, const char *json) {
     (void)json;
     if (strcmp(cmd, "echo_cmd") == 0) {
