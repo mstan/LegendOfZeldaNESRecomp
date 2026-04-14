@@ -2,6 +2,7 @@
 
 [game]
 output_prefix = "zelda"
+symbol_file = "symbols.sym"
 
 # ── Bank switch routine at $FFAC ─────────────────────────────────────────────
 [mapper]
