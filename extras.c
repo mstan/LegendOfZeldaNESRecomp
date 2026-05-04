@@ -95,6 +95,11 @@ uint32_t game_get_expected_crc32(void) { return 0x3FE272FBu; }
 
 const char *game_get_name(void) { return "The Legend of Zelda"; }
 
+#if 0  /* Legacy write_bp API removed from nesrecomp at commit 69ecd30
+        * (refactor(rdb): retire legacy write_bp + follower + watch_s).
+        * The Tier 2.5 replacement is rdb_watch_add (TCP-driven, see
+        * REVERSE_DEBUGGER.md). This callback hook hasn't been migrated
+        * yet — leaving the source in #if 0 as a porting reference. */
 /* Write breakpoint callback: log stack when ObjTimer[1] ($0029) is written */
 static void on_timer1_write(uint16_t addr, uint8_t old_val, uint8_t new_val) {
     (void)addr;
@@ -109,6 +114,7 @@ static void on_timer1_write(uint16_t addr, uint8_t old_val, uint8_t new_val) {
         fprintf(stderr, "\n");
     }
 }
+#endif  /* legacy write_bp callback */
 
 void game_on_init(void) {
     /* Load battery-backed SRAM from disk */
@@ -116,11 +122,6 @@ void game_on_init(void) {
     sram_load();
 
     s_debug_enabled = check_debug_ini();
-
-    /* Set write breakpoint on ObjTimer[1] = $0029 */
-    g_write_bp_addr = 0x0029;
-    g_write_bp_match_val = 0xFF;  /* any value */
-    g_write_bp_callback = on_timer1_write;
 
     if (s_debug_enabled) {
         printf("[Debug] debug.ini found -- TCP server and verify mode enabled\n");
