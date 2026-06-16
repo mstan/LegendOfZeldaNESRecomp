@@ -109,6 +109,10 @@ target_include_directories(LegendOfZeldaNESRecomp PRIVATE
 
 target_link_libraries(LegendOfZeldaNESRecomp PRIVATE ${SDL2_LIBRARIES})
 
+# ---- Pre-boot GUI launcher (RmlUi) ----
+include(${NESRECOMP_ROOT}/runner/launcher.cmake)
+nesrecomp_add_launcher(LegendOfZeldaNESRecomp)
+
 if(WIN32)
     target_link_libraries(LegendOfZeldaNESRecomp PRIVATE ws2_32)
 endif()
