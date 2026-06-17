@@ -29,7 +29,10 @@ $out  = Join-Path $root 'release'
 New-Item -ItemType Directory -Force $out | Out-Null
 
 if (-not $SkipBuild) {
-  & cmd /c (Join-Path $root '_zelda_build.bat')
+  # Use the explicit Windows command processor ($env:ComSpec). A bare `cmd`
+  # can resolve to an msys2/devkitPro shim earlier on PATH, which silently
+  # no-ops the .bat (exit 0, nothing built) instead of running it.
+  & "$env:ComSpec" /c (Join-Path $root '_zelda_build.bat')
   if ($LASTEXITCODE -ne 0) { throw "_zelda_build.bat failed ($LASTEXITCODE)" }
 }
 
