@@ -5,6 +5,36 @@ See `nesrecomp/CLAUDE.md` for the full framework rules (RULE 0, RULE 1, RULE 2, 
 
 ---
 
+## Cutting a release — TWO builds (stock + HD)
+
+This project ships **two executables**, because a static recompiler bakes one ROM's
+code into each exe:
+
+| Exe | Recompiled from | What it is |
+|-----|-----------------|------------|
+| `LegendOfZeldaNESRecomp.exe` (default) | stock `Zelda # NES.NES` | **pure stock** Zelda — no enhancements; launcher hides the HD-pack panel; runtime never loads a pack |
+| `LegendOfZeldaNESRecomp-HD.exe` | patched `build/zelda_hd.nes` | **Zelda Remastered** — patched gameplay/text/audio; HD-pack panel + loading enabled; the HD texture pack is calibrated against this ROM |
+
+**To build both: run `_zelda_release.bat`.** It builds the recompiler, derives the
+patched ROM (`tools/apply_hd_patch.py` + `hdpatch/ZeldaHD.ips`), regens *both* ROMs
+(renaming the recompiler's `generated/zelda_*` output to `zelda_stock_*` /
+`zelda_hd_*`), then configures and builds both CMake targets into `build_release/`.
+You must supply a legitimate stock PRG0 ROM (SHA-1
+`dab79c84934f9aa5db4e7dad390e5d0c12443fa2`); no ROM is committed.
+
+**How the split is wired** (all keyed off one compile flag, `NESRECOMP_GAME_NO_HDPACK`,
+which the stock target defines in `CMakeLists.txt`):
+- `extras.c` → `game_get_expected_crc32()` returns stock `0x3FE272FB` vs patched `0xFD9C577F`.
+- `hdpack.c` → `hdpack_load_from_config()` early-returns (no pack) on the stock build.
+- `launcher.c` → sets `hdpack_supported = 0`, so the launcher hides the whole HD-pack
+  panel (mirrors the existing `widescreen_supported` gate).
+
+Dev tip: build just one variant with `cmake --build build_release --target LegendOfZeldaNESRecomp`
+(or `…-HD`). The "NOMAP 0.2 BY SNARF" title credit is part of the patched ROM (PRG
+`0x1A8B7`), so it only appears on the HD build — that's intended.
+
+---
+
 ## TCP Debug Server (CRITICAL - use this for debugging)
 
 The game executable runs a **TCP debug server on localhost:4370** (enabled when `debug.ini` exists next to the exe). Connect with any TCP client (e.g., `ncat`, Python socket, or the Bash tool via `echo '...' | ncat localhost 4370`).

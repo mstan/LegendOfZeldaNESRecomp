@@ -69,12 +69,21 @@ static void get_exe_relative_path(const char *filename, char *out, int max_len) 
 
 /* ---- game_extras.h implementation ---- */
 
-/* Built from the HD ("Zelda Remastered") patched ROM: ZeldaHD.ips applied to a
- * clean PRG0 ROM (stock CRC 0x3FE272FB) -> patched CRC below. The recompiled
- * code is baked from the patched ROM and the runner reads PRG data from the
- * loaded ROM at runtime, so the HD build requires the patched ROM (build it with
- * tools/apply_hd_patch.py). */
-uint32_t game_get_expected_crc32(void) { return 0xFD9C577Fu; }
+/* Two builds (see CMakeLists.txt + _zelda_release.bat):
+ *   - STOCK build (NESRECOMP_GAME_NO_HDPACK defined): recompiled from a clean
+ *     PRG0 ROM, byte-identical stock Zelda, no enhancements, HD packs disabled.
+ *   - HD build (default): recompiled from the "Zelda Remastered" patched ROM
+ *     (ZeldaHD.ips applied to stock via tools/apply_hd_patch.py). The recompiled
+ *     code is baked from the patched ROM and the runner reads PRG data from the
+ *     loaded ROM at runtime, so this build requires the patched ROM.
+ * The CRC must match whichever ROM the build was recompiled from. */
+uint32_t game_get_expected_crc32(void) {
+#ifdef NESRECOMP_GAME_NO_HDPACK
+    return 0x3FE272FBu;  /* stock PRG0 "Legend of Zelda, The (USA)" */
+#else
+    return 0xFD9C577Fu;  /* patched (Zelda Remastered) */
+#endif
+}
 
 const char *game_get_name(void) { return "The Legend of Zelda"; }
 

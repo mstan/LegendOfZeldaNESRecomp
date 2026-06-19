@@ -87,52 +87,71 @@ include(${NESRECOMP_ROOT}/runner/runner.cmake)
 list(APPEND CMAKE_PREFIX_PATH "${NESRECOMP_ROOT}/runner/external/SDL2/cmake")
 find_package(SDL2 REQUIRED)
 
-# ---- Main executable ----
-add_executable(LegendOfZeldaNESRecomp
-    ${NESRECOMP_RUNNER_SOURCES}
-    extras.c
-    recomp_stack.c
-    nes_snapshot.c
-    verify_mode.c
-    watchdog.c
-    generated/zelda_full.c
-    generated/zelda_dispatch.c
-)
-
-target_compile_definitions(LegendOfZeldaNESRecomp PRIVATE RECOMP_STACK_TRACKING WATCHDOG_ENABLED)
-
-target_include_directories(LegendOfZeldaNESRecomp PRIVATE
-    ${NESRECOMP_RUNNER_INCLUDE_DIRS}
-    ${CMAKE_SOURCE_DIR}
-    ${SDL2_INCLUDE_DIRS}
-)
-
-target_link_libraries(LegendOfZeldaNESRecomp PRIVATE ${SDL2_LIBRARIES})
-
 # ---- Pre-boot GUI launcher (RmlUi) ----
+# Defines nesrecomp_add_launcher(); the RmlUi/FreeType libs it builds are guarded
+# so calling it for both game variants below adds them only once.
 include(${NESRECOMP_ROOT}/runner/launcher.cmake)
-nesrecomp_add_launcher(LegendOfZeldaNESRecomp)
 
-if(WIN32)
-    target_link_libraries(LegendOfZeldaNESRecomp PRIVATE ws2_32)
-endif()
-
-# ---- Nestopia Oracle integration ----
-if(ENABLE_NESTOPIA_ORACLE)
-    target_link_libraries(LegendOfZeldaNESRecomp PRIVATE nestopia_core)
-    target_compile_definitions(LegendOfZeldaNESRecomp PRIVATE ENABLE_NESTOPIA_ORACLE)
-endif()
-
-# ---- Post-build ----
-if(WIN32)
-    add_custom_command(TARGET LegendOfZeldaNESRecomp POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            "${NESRECOMP_ROOT}/runner/external/SDL2/lib/x64/SDL2.dll"
-            "$<TARGET_FILE_DIR:LegendOfZeldaNESRecomp>"
+# ---- Game variants: stock + HD (two builds from one project) ----
+# See _zelda_release.bat / the "Cutting a release" section in CLAUDE.md.
+#   LegendOfZeldaNESRecomp      (default) — recompiled from STOCK zelda.nes: pure
+#       stock game, no Remastered enhancements; the launcher hides the HD-pack
+#       panel and the runtime never loads a pack (NESRECOMP_GAME_NO_HDPACK).
+#   LegendOfZeldaNESRecomp-HD             — recompiled from the patched "Zelda
+#       Remastered" ROM: full remaster, HD-pack panel + loading enabled.
+# Each variant compiles its OWN generated/<prefix>_{full,dispatch}.c, produced by
+# regenning the recompiler against the matching ROM (the release script does both
+# and renames the recompiler's "zelda_*" output to the per-variant prefix). They
+# are separate executables, so the identical func_* symbols never collide.
+function(add_zelda_variant TARGET GEN_PREFIX IS_STOCK)
+    add_executable(${TARGET}
+        ${NESRECOMP_RUNNER_SOURCES}
+        extras.c
+        recomp_stack.c
+        nes_snapshot.c
+        verify_mode.c
+        watchdog.c
+        generated/${GEN_PREFIX}_full.c
+        generated/${GEN_PREFIX}_dispatch.c
     )
-endif()
 
-if(MSVC)
-    target_compile_options(LegendOfZeldaNESRecomp PRIVATE /W3 /WX-)
-    target_compile_options(LegendOfZeldaNESRecomp PRIVATE /wd4102)
-endif()
+    target_compile_definitions(${TARGET} PRIVATE RECOMP_STACK_TRACKING WATCHDOG_ENABLED)
+    if(IS_STOCK)
+        # Stock CRC (extras.c) + HD packs disabled (launcher panel hidden, runtime
+        # never loads — see hdpack.c / launcher.c).
+        target_compile_definitions(${TARGET} PRIVATE NESRECOMP_GAME_NO_HDPACK)
+    endif()
+
+    target_include_directories(${TARGET} PRIVATE
+        ${NESRECOMP_RUNNER_INCLUDE_DIRS}
+        ${CMAKE_SOURCE_DIR}
+        ${SDL2_INCLUDE_DIRS}
+    )
+
+    target_link_libraries(${TARGET} PRIVATE ${SDL2_LIBRARIES})
+    nesrecomp_add_launcher(${TARGET})
+
+    if(WIN32)
+        target_link_libraries(${TARGET} PRIVATE ws2_32)
+    endif()
+
+    if(ENABLE_NESTOPIA_ORACLE)
+        target_link_libraries(${TARGET} PRIVATE nestopia_core)
+        target_compile_definitions(${TARGET} PRIVATE ENABLE_NESTOPIA_ORACLE)
+    endif()
+
+    if(WIN32)
+        add_custom_command(TARGET ${TARGET} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${NESRECOMP_ROOT}/runner/external/SDL2/lib/x64/SDL2.dll"
+                "$<TARGET_FILE_DIR:${TARGET}>"
+        )
+    endif()
+
+    if(MSVC)
+        target_compile_options(${TARGET} PRIVATE /W3 /WX- /wd4102)
+    endif()
+endfunction()
+
+add_zelda_variant(LegendOfZeldaNESRecomp     zelda_stock TRUE)   # default = stock
+add_zelda_variant(LegendOfZeldaNESRecomp-HD  zelda_hd    FALSE)  # full Remastered
