@@ -139,25 +139,6 @@ void game_on_init(void) {
     }
 }
 
-/* Dump entity slots using correct addresses from disassembly:
- * ObjType=$034F  ObjX=$0070  ObjY=$0084  ObjDir=$0098
- * ObjState=$00AC  ObjMetastate=$0405  ObjUninitialized=$0492 */
-static void dump_entities(uint64_t frame_count, const char *label) {
-    printf("[%s] frame=%llu entity slots:\n", label, (unsigned long long)frame_count);
-    for (int i = 0; i < 12; i++) {
-        uint8_t type  = g_ram[0x34F + i];
-        uint8_t x     = g_ram[0x70  + i];
-        uint8_t y     = g_ram[0x84  + i];
-        uint8_t state = g_ram[0xAC  + i];
-        uint8_t meta  = g_ram[0x405 + i];
-        uint8_t uninit= g_ram[0x492 + i];
-        if (type != 0 || meta != 0)
-            printf("  slot%d type=$%02X x=$%02X y=$%02X st=$%02X meta=$%02X uninit=$%02X\n",
-                   i, type, x, y, state, meta, uninit);
-    }
-    printf("  GameMode=$%02X Sub=$%02X\n", g_ram[0x12], g_ram[0x11]);
-}
-
 void game_on_frame(uint64_t frame_count) {
     if (s_debug_enabled) {
         debug_server_poll();
@@ -166,45 +147,7 @@ void game_on_frame(uint64_t frame_count) {
         if (ovr >= 0)
             g_controller1_buttons = (uint8_t)ovr;
     }
-
-    static uint8_t last_mode = 0xFF, last_sub = 0xFF;
-    static int ob_sub_cycled = 0; /* did we see sub>0 in mode $0B? */
-    uint8_t mode = g_ram[0x12], sub = g_ram[0x13];
-
-    if (mode != last_mode || sub != last_sub) {
-        printf("[Mode] frame=%llu mode=$%02X sub=$%02X\n",
-               (unsigned long long)frame_count, mode, sub);
-
-        /* When mode $0B init cycle completes (sub went >0 then back to 0) */
-        if (mode == 0x0B && sub == 0x00 && ob_sub_cycled) {
-            dump_entities(frame_count, "0B-done");
-            ob_sub_cycled = 0;
-        }
-        if (mode == 0x0B && sub > 0x00)
-            ob_sub_cycled = 1;
-
-        last_mode = mode; last_sub = sub;
-    }
-
-    /* Entity diagnostics every 60 frames during gameplay or room-loaded state */
-    if ((mode == 0x07 || mode == 0x06 || mode == 0x05) && (frame_count % 60) == 0) {
-        dump_entities(frame_count, "Ent");
-        printf("  $051E=$%02X $051F=$%02X $EB=$%02X\n",
-               g_ram[0x51E], g_ram[0x51F], g_ram[0xEB]);
-    }
-    /* OAM shadow: first 8 sprites (32 bytes at $0200) */
-    if (mode == 0x07 && (frame_count % 120) == 0) {
-        printf("[OAM] f=%llu: ", (unsigned long long)frame_count);
-        for (int i = 0; i < 8; i++) {
-            uint8_t y  = g_ram[0x200 + i*4];
-            uint8_t t  = g_ram[0x201 + i*4];
-            uint8_t at = g_ram[0x202 + i*4];
-            uint8_t x  = g_ram[0x203 + i*4];
-            (void)at;
-            printf("[%d]y=%d t=%02X x=%d ", i, y, t, x);
-        }
-        printf("\n");
-    }
+    (void)frame_count;
 }
 
 void game_post_nmi(uint64_t frame_count) {
