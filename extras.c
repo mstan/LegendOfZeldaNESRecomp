@@ -69,7 +69,12 @@ static void get_exe_relative_path(const char *filename, char *out, int max_len) 
 
 /* ---- game_extras.h implementation ---- */
 
-uint32_t game_get_expected_crc32(void) { return 0x3FE272FBu; }
+/* Built from the HD ("Zelda Remastered") patched ROM: ZeldaHD.ips applied to a
+ * clean PRG0 ROM (stock CRC 0x3FE272FB) -> patched CRC below. The recompiled
+ * code is baked from the patched ROM and the runner reads PRG data from the
+ * loaded ROM at runtime, so the HD build requires the patched ROM (build it with
+ * tools/apply_hd_patch.py). */
+uint32_t game_get_expected_crc32(void) { return 0xFD9C577Fu; }
 
 const char *game_get_name(void) { return "The Legend of Zelda"; }
 
