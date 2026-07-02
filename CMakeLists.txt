@@ -107,7 +107,6 @@ function(add_zelda_variant TARGET GEN_PREFIX IS_STOCK)
     add_executable(${TARGET}
         ${NESRECOMP_RUNNER_SOURCES}
         extras.c
-        recomp_stack.c
         nes_snapshot.c
         verify_mode.c
         watchdog.c
