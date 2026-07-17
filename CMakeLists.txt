@@ -72,9 +72,8 @@ function(add_zelda_variant TARGET GEN_PREFIX IS_STOCK)
     recomp_target_launcher_ui(${TARGET} BOXART ${CMAKE_SOURCE_DIR}/boxart.tga)
 
     if(WIN32)
-        # ws2_32 for the TCP debug server; opengl32 for the ImGui GL3 backend
-        # (previously pulled in by the RmlUi launcher.cmake via OpenGL::GL).
-        target_link_libraries(${TARGET} PRIVATE ws2_32 opengl32)
+        # ws2_32 for the TCP debug server (OpenGL is linked by recomp_ui.cmake).
+        target_link_libraries(${TARGET} PRIVATE ws2_32)
     endif()
 
     if(ENABLE_NESTOPIA_ORACLE)

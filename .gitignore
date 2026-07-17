@@ -18,9 +18,6 @@ tmp_*.py
 hdpack/
 *.csv
 
-# nesrecomp is cloned by setup.sh / setup.bat into this directory.
-# Pinned SHA recorded in nesrecomp.pin and enforced at CMake configure time.
 nestopia-core
 
-# recomp-ui launcher is a junction to the shared checkout (submodule later).
 build_ui/
