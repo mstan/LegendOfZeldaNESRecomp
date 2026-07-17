@@ -120,6 +120,8 @@ function(add_zelda_variant TARGET GEN_PREFIX IS_STOCK)
     # launcher's SAVES panel shows the SRAM row unconditionally, from the very
     # first launch, without waiting for a ROM to have been picked once.
     target_compile_definitions(${TARGET} PRIVATE NESRECOMP_GAME_BATTERY)
+    # Single-player (one controller) — hide the Player 2 card.
+    target_compile_definitions(${TARGET} PRIVATE NESRECOMP_GAME_PLAYERS=1)
     if(IS_STOCK)
         # Stock CRC (extras.c) + HD packs disabled (launcher panel hidden, runtime
         # never loads — see hdpack.c / launcher.c).
