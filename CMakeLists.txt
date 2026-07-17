@@ -87,10 +87,11 @@ include(${NESRECOMP_ROOT}/runner/runner.cmake)
 list(APPEND CMAKE_PREFIX_PATH "${NESRECOMP_ROOT}/runner/external/SDL2/cmake")
 find_package(SDL2 REQUIRED)
 
-# ---- Pre-boot GUI launcher (RmlUi) ----
-# Defines nesrecomp_add_launcher(); the RmlUi/FreeType libs it builds are guarded
-# so calling it for both game variants below adds them only once.
-include(${NESRECOMP_ROOT}/runner/launcher.cmake)
+# ---- Pre-boot GUI launcher (recomp-ui / Dear ImGui) ----
+# recomp-ui/ is a directory junction -> the shared recomp-ui checkout. Its module
+# defines recomp_target_launcher_ui() (RECOMP_LAUNCHER on the target, staging the
+# launcher assets); called once per game variant below.
+include(${CMAKE_SOURCE_DIR}/recomp-ui/recomp_ui.cmake)
 
 # ---- Game variants: stock + HD (two builds from one project) ----
 # See _zelda_release.bat / the "Cutting a release" section in CLAUDE.md.
@@ -115,6 +116,10 @@ function(add_zelda_variant TARGET GEN_PREFIX IS_STOCK)
     )
 
     target_compile_definitions(${TARGET} PRIVATE RECOMP_STACK_TRACKING WATCHDOG_ENABLED)
+    # Zelda is battery-backed (iNES header byte 6 bit 1) — declare it so the
+    # launcher's SAVES panel shows the SRAM row unconditionally, from the very
+    # first launch, without waiting for a ROM to have been picked once.
+    target_compile_definitions(${TARGET} PRIVATE NESRECOMP_GAME_BATTERY)
     if(IS_STOCK)
         # Stock CRC (extras.c) + HD packs disabled (launcher panel hidden, runtime
         # never loads — see hdpack.c / launcher.c).
@@ -128,10 +133,12 @@ function(add_zelda_variant TARGET GEN_PREFIX IS_STOCK)
     )
 
     target_link_libraries(${TARGET} PRIVATE ${SDL2_LIBRARIES})
-    nesrecomp_add_launcher(${TARGET})
+    recomp_target_launcher_ui(${TARGET} BOXART ${CMAKE_SOURCE_DIR}/boxart.tga)
 
     if(WIN32)
-        target_link_libraries(${TARGET} PRIVATE ws2_32)
+        # ws2_32 for the TCP debug server; opengl32 for the ImGui GL3 backend
+        # (previously pulled in by the RmlUi launcher.cmake via OpenGL::GL).
+        target_link_libraries(${TARGET} PRIVATE ws2_32 opengl32)
     endif()
 
     if(ENABLE_NESTOPIA_ORACLE)
