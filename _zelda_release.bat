@@ -22,7 +22,7 @@ REM ===========================================================================
 
 call "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" amd64
 set "PATH=C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin;C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja;%PATH%"
-cd /d F:\Projects\nesrecomp\LegendOfZeldaNESRecomp
+cd /d %~dp0
 
 echo === [1/5] Build recompiler ===
 cd nesrecomp
@@ -36,24 +36,24 @@ cd ..
 set "RECOMP=nesrecomp\build_recomp\NESRecomp.exe"
 
 echo === [2/5] Derive patched HD ROM ===
+if not exist build mkdir build
 python tools\apply_hd_patch.py --rom "Zelda # NES.NES" --ips hdpatch\ZeldaHD.ips --out build\zelda_hd.nes
 if errorlevel 1 exit /b 2
 
-REM The recompiler always writes generated\zelda_{full,dispatch}.c (output_prefix
-REM in game.toml). We regen each ROM and rename to the per-variant prefix the
-REM CMake targets expect (zelda_stock_* / zelda_hd_*).
+REM Each variant regens the same game.toml under its OWN output prefix
+REM (--output-prefix), so the recompiler writes generated\zelda_stock_* /
+REM zelda_hd_* directly — umbrella, per-bank split parts, and dispatch all
+REM carry the prefix, so the two variants' bank files never collide (the
+REM per-bank split makes the old "regen then rename the umbrella" approach
+REM unsafe, since both umbrellas would #include the same zelda_full_bankNN.c).
 
 echo === [3/5] Regen STOCK (generated\zelda_stock_*) ===
-"%RECOMP%" "Zelda # NES.NES" --game game.toml
+"%RECOMP%" "Zelda # NES.NES" --game game.toml --output-prefix zelda_stock
 if errorlevel 1 exit /b 3
-move /Y generated\zelda_full.c     generated\zelda_stock_full.c     >nul
-move /Y generated\zelda_dispatch.c generated\zelda_stock_dispatch.c >nul
 
 echo === [4/5] Regen HD (generated\zelda_hd_*) ===
-"%RECOMP%" build\zelda_hd.nes --game game.toml
+"%RECOMP%" build\zelda_hd.nes --game game.toml --output-prefix zelda_hd
 if errorlevel 1 exit /b 4
-move /Y generated\zelda_full.c     generated\zelda_hd_full.c     >nul
-move /Y generated\zelda_dispatch.c generated\zelda_hd_dispatch.c >nul
 
 echo === [5/5] Configure + build both targets ===
 if not exist build_release\CMakeCache.txt (

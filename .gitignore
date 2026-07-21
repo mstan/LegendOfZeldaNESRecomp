@@ -19,3 +19,5 @@ hdpack/
 *.csv
 
 nestopia-core
+
+build_ui/
