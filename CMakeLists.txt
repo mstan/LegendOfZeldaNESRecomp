@@ -10,12 +10,6 @@ set(NESRECOMP_ROOT ${CMAKE_SOURCE_DIR}/nesrecomp)
 # commit is the gitlink recorded in this repo. After cloning run setup.sh/.bat
 # (git submodule update --init) to fetch them at the recorded commits.
 
-# ---- Nestopia Oracle (optional) ----
-option(ENABLE_NESTOPIA_ORACLE "Build with Nestopia emulator oracle for verify mode" ON)
-if(ENABLE_NESTOPIA_ORACLE)
-    set(NESTOPIA_DIR ${CMAKE_SOURCE_DIR}/nestopia-core)
-endif()
-
 include(${NESRECOMP_ROOT}/runner/runner.cmake)
 
 list(APPEND CMAKE_PREFIX_PATH "${NESRECOMP_ROOT}/runner/external/SDL2/cmake")
@@ -74,11 +68,6 @@ function(add_zelda_variant TARGET GEN_PREFIX IS_STOCK)
     if(WIN32)
         # ws2_32 for the TCP debug server (OpenGL is linked by recomp_ui.cmake).
         target_link_libraries(${TARGET} PRIVATE ws2_32)
-    endif()
-
-    if(ENABLE_NESTOPIA_ORACLE)
-        target_link_libraries(${TARGET} PRIVATE nestopia_core)
-        target_compile_definitions(${TARGET} PRIVATE ENABLE_NESTOPIA_ORACLE)
     endif()
 
     if(WIN32)

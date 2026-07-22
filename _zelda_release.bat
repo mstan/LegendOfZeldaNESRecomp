@@ -57,7 +57,7 @@ if errorlevel 1 exit /b 4
 
 echo === [5/5] Configure + build both targets ===
 if not exist build_release\CMakeCache.txt (
-    cmake -S . -B build_release -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DENABLE_NESTOPIA_ORACLE=OFF
+    cmake -S . -B build_release -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
     if errorlevel 1 exit /b 5
 )
 cmake --build build_release
