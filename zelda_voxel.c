@@ -51,6 +51,7 @@ static int s_room_snapshot_valid;
 static uint32_t s_stable_frame[ZELDA_OUTPUT_WIDTH * ZELDA_OUTPUT_HEIGHT];
 static int s_stable_frame_valid;
 static int s_was_scrolling;
+static int s_exit_loading;
 static int s_mod_enabled;
 static int s_view_enabled;
 static int s_pitch = 35;
@@ -71,6 +72,10 @@ static int s_default_sprite_scale = 135;
 
 static int gameplay_scene_visible(void);
 static int scrolling_scene_visible(void);
+static int world_load_scene_visible(void);
+static int world_unfurl_active(void);
+static int dungeon_exit_scroll_pending(void);
+static int current_tiles_are_overworld(void);
 static void configure_scene_backdrop(NesVoxelScene *scene);
 static void update_render_controls(void);
 static int clamp_int(int value, int low, int high);
@@ -89,8 +94,20 @@ static int overworld_walkable_exception(uint8_t tile) {
     return 0;
 }
 
+static int current_tiles_are_overworld(void) {
+    uint8_t mode = g_ram[0x0012];
+    uint8_t submode = g_ram[0x0013];
+    if (g_ram[0x0010] != 0) return 0; /* CurLevel */
+    if ((mode == 0x0B || mode == 0x0C) &&
+        (submode >= 4 || g_ram[0x0011] != 0))
+        return 0;
+    if (mode == 0x0A && g_ram[0x005A] != 0 && submode < 5)
+        return 0;
+    return 1;
+}
+
 static void classify_tiles_into(const uint8_t *tiles, float *heights) {
-    int overworld = g_ram[0x0010] == 0; /* CurLevel */
+    int overworld = current_tiles_are_overworld();
     uint8_t first_unwalkable = g_ram[0x034A];
     memset(heights, 0, sizeof(float) * ZELDA_TILE_COUNT);
 
@@ -189,6 +206,30 @@ static uint8_t room_tile_palette(const uint8_t *attrs, int x, int y) {
     return (attr >> shift) & 3;
 }
 
+static void draw_tile_pixels(uint32_t *pixels, int stride, uint8_t tile,
+                             int palette) {
+    int chr_base = (g_ppuctrl & 0x10) ? 0x1000 : 0;
+    for (int py = 0; py < 8; py++) {
+        uint8_t lo = g_chr_ram[chr_base + tile * 16 + py];
+        uint8_t hi = g_chr_ram[chr_base + tile * 16 + py + 8];
+        for (int px = 0; px < 8; px++) {
+            int bit = 7 - px;
+            int color_index =
+                ((lo >> bit) & 1) | (((hi >> bit) & 1) << 1);
+            uint8_t nes_color =
+                g_ppu_pal[(palette + color_index) & 0x1F] & 0x3F;
+            pixels[py * stride + px] = g_nes_palette[nes_color];
+        }
+    }
+}
+
+static void zelda_room_tile_pixels(uint32_t *pixels, int stride,
+                                   uint8_t tile, int x, int y, void *user) {
+    int palette = room_tile_palette(ZELDA_PLAY_AREA_ATTRS, x, y) * 4;
+    (void)user;
+    draw_tile_pixels(pixels, stride, tile, palette);
+}
+
 static void copy_transition_room(int dst_x, int dst_y,
                                  const uint8_t *tiles,
                                  const uint8_t *attrs,
@@ -214,22 +255,10 @@ static float zelda_transition_tile_height(uint8_t tile, int x, int y,
 static void zelda_transition_tile_pixels(uint32_t *pixels, int stride,
                                          uint8_t tile, int x, int y,
                                          void *user) {
-    int chr_base = (g_ppuctrl & 0x10) ? 0x1000 : 0;
     int palette =
         s_transition_palettes[y * s_transition_columns + x] * 4;
     (void)user;
-    for (int py = 0; py < 8; py++) {
-        uint8_t lo = g_chr_ram[chr_base + tile * 16 + py];
-        uint8_t hi = g_chr_ram[chr_base + tile * 16 + py + 8];
-        for (int px = 0; px < 8; px++) {
-            int bit = 7 - px;
-            int color_index =
-                ((lo >> bit) & 1) | (((hi >> bit) & 1) << 1);
-            uint8_t nes_color =
-                g_ppu_pal[(palette + color_index) & 0x1F] & 0x3F;
-            pixels[py * stride + px] = g_nes_palette[nes_color];
-        }
-    }
+    draw_tile_pixels(pixels, stride, tile, palette);
 }
 
 static int transition_progress_pixels(int direction) {
@@ -333,6 +362,7 @@ void zelda_voxel_set_mod_enabled(int enabled) {
     if (!s_mod_enabled) {
         s_stable_frame_valid = 0;
         s_was_scrolling = 0;
+        s_exit_loading = 0;
         s_room_snapshot_valid = 0;
     }
 }
@@ -448,9 +478,27 @@ void zelda_voxel_update_hotkey(void) {
             ? ZELDA_WIDE_MARGIN : 0;
         if (s_view_enabled && (scrolling_scene_visible() || s_was_scrolling))
             margin = ZELDA_WIDE_MARGIN;
+        if (s_view_enabled && world_load_scene_visible())
+            margin = ZELDA_WIDE_MARGIN;
         g_ws_eff_left = margin;
         g_ws_eff_right = margin;
     }
+}
+
+static int world_unfurl_active(void) {
+    return g_ram[0x0012] == 3 && g_ram[0x0011] != 0;
+}
+
+static int world_load_scene_visible(void) {
+    uint8_t mode = g_ram[0x0012];
+    return mode == 2 || mode == 3 || mode == 4;
+}
+
+static int dungeon_exit_scroll_pending(void) {
+    uint8_t mode = g_ram[0x0012];
+    return (mode == 6 || mode == 7) && g_ram[0x0010] != 0 &&
+           (g_ram[0x0098] & 0x0F) == 4 && /* ObjDir: down */
+           g_ram[0x00EB] == g_sram[0x0BAD]; /* LevelInfo_StartRoomId */
 }
 
 static int gameplay_scene_visible(void) {
@@ -460,7 +508,8 @@ static int gameplay_scene_visible(void) {
      * back to the native renderer when the GAME OVER text is queued. */
     int death_animation = mode == 0x11 && submode <= 0x0A;
     int playing =
-        mode == 5 || mode == 9 || mode == 11 || mode == 12 || mode == 0x10 ||
+        mode == 5 || mode == 9 || mode == 0x0A || mode == 11 || mode == 12 ||
+        mode == 0x10 || mode == 4 || world_unfurl_active() ||
         death_animation;
     if (!playing) return 0;
     if (g_ram[0x00E1] != 0) return 0; /* MenuState: preserve sliding inventory */
@@ -476,7 +525,7 @@ static void configure_scene_backdrop(NesVoxelScene *scene) {
     uint8_t mode = g_ram[0x0012];
     uint8_t submode = g_ram[0x0013];
     int underground =
-        g_ram[0x0010] != 0 || mode == 0x0B || mode == 0x0C;
+        !current_tiles_are_overworld() || mode == 0x0B || mode == 0x0C;
 
     if (mode == 0x11 && submode >= 8) {
         /* Zelda fades the playfield to black before GAME OVER. Do not leave
@@ -494,6 +543,22 @@ static void configure_scene_backdrop(NesVoxelScene *scene) {
     }
 }
 
+static void fade_unfurl_from_black(uint32_t *framebuffer) {
+    int column = clamp_int(g_ram[0x007C], 0, 16); /* ObjX+12 */
+    int visible = 16 - column;
+    for (int y = ZELDA_PLAYFIELD_Y; y < ZELDA_OUTPUT_HEIGHT; y++) {
+        for (int x = 0; x < ZELDA_OUTPUT_WIDTH; x++) {
+            uint32_t color =
+                framebuffer[y * ZELDA_OUTPUT_WIDTH + x];
+            unsigned r = ((color >> 16) & 0xFF) * visible / 16;
+            unsigned g = ((color >> 8) & 0xFF) * visible / 16;
+            unsigned b = (color & 0xFF) * visible / 16;
+            framebuffer[y * ZELDA_OUTPUT_WIDTH + x] =
+                0xFF000000u | (r << 16) | (g << 8) | b;
+        }
+    }
+}
+
 void zelda_voxel_post_render(uint32_t *framebuffer) {
     NesVoxelScene scene;
     int gameplay_visible;
@@ -502,6 +567,30 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
     if (!s_mod_enabled || !s_view_enabled) return;
     gameplay_visible = gameplay_scene_visible();
     transition_visible = g_ram[0x0012] == 7;
+    if (dungeon_exit_scroll_pending())
+        s_exit_loading = 1;
+    if (s_exit_loading &&
+        (g_ram[0x0012] == 6 || transition_visible)) {
+        /* Leaving a dungeon/cave does not scroll into an adjacent room. Mode
+         * 7 is only a handoff into the overworld loader, whose partially
+         * populated tile array must not replace the coherent indoor frame. */
+        if (s_stable_frame_valid)
+            memcpy(framebuffer, s_stable_frame, sizeof(s_stable_frame));
+        s_was_scrolling = 1;
+        return;
+    }
+    if (world_load_scene_visible() && !gameplay_visible) {
+        /* World loading briefly leaves the previous nametable repeated across
+         * the widescreen surface. Keep the coherent source diorama until the
+         * destination room is laid out and its curtain animation can become a
+         * 3D fade-in. A cold load has no source room, so use a clean blackout. */
+        if (s_stable_frame_valid) {
+            memcpy(framebuffer, s_stable_frame, sizeof(s_stable_frame));
+        } else {
+            memset(framebuffer, 0, sizeof(s_stable_frame));
+        }
+        return;
+    }
     if (g_ram[0x0012] == 6 ||
         (s_was_scrolling && !transition_visible && !gameplay_visible)) {
         /* Mode 6 streams the destination room before native scrolling starts.
@@ -551,6 +640,8 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
         scene.tile_stride = ZELDA_TILE_ROWS;
         scene.column_major = 1;
         scene.tile_height = zelda_tile_height;
+        if (world_unfurl_active() || g_ram[0x0012] == 0x0A)
+            scene.tile_pixels = zelda_room_tile_pixels;
     }
     scene.elevation_degrees = s_render_pitch;
     scene.yaw_degrees = s_render_yaw;
@@ -568,12 +659,14 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
     scene.sprite_depth_bias = 1.0f;
     scene.sprite_ground = zelda_sprite_ground;
     scene.sprite_overlay = zelda_sprite_overlay;
-    scene.draw_oam_sprites = 1;
+    scene.draw_oam_sprites = !world_unfurl_active();
     scene.preserve_top_rows = ZELDA_PLAYFIELD_Y;
     scene.extend_preserved_rows = 1;
     scene.preserved_rows_fill = 0xFF000000u;
     configure_scene_backdrop(&scene);
     if (nes_voxel_render(&scene)) {
+        if (world_unfurl_active())
+            fade_unfurl_from_black(framebuffer);
         memcpy(s_stable_frame, framebuffer, sizeof(s_stable_frame));
         s_stable_frame_valid = 1;
         if (transition_visible) {
@@ -589,5 +682,7 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
         if (s_was_scrolling && !transition_visible)
             printf("[Voxel] room scroll: destination diorama ready\n");
         if (!transition_visible) s_was_scrolling = 0;
+        if (g_ram[0x0012] == 5)
+            s_exit_loading = 0;
     }
 }
