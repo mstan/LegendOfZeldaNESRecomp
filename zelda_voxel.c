@@ -67,6 +67,7 @@ static int s_default_sprite_scale = 135;
 
 static int gameplay_scene_visible(void);
 static int scrolling_scene_visible(void);
+static void configure_scene_backdrop(NesVoxelScene *scene);
 static int clamp_int(int value, int low, int high);
 
 static int tile_index(int x, int y) {
@@ -445,6 +446,28 @@ static int scrolling_scene_visible(void) {
     return mode == 6 || mode == 7;
 }
 
+static void configure_scene_backdrop(NesVoxelScene *scene) {
+    uint8_t mode = g_ram[0x0012];
+    uint8_t submode = g_ram[0x0013];
+    int underground =
+        g_ram[0x0010] != 0 || mode == 0x0B || mode == 0x0C;
+
+    if (mode == 0x11 && submode >= 8) {
+        /* Zelda fades the playfield to black before GAME OVER. Do not leave
+         * the presentation-only outdoor sky glowing behind that fade. */
+        scene->sky_top = 0xFF000000u;
+        scene->sky_bottom = 0xFF000000u;
+    } else if (underground) {
+        /* Dungeon and cave rooms are enclosed spaces. A subdued surrounding
+         * void keeps the projected edges from reading as outdoor daylight. */
+        scene->sky_top = 0xFF05070Cu;
+        scene->sky_bottom = 0xFF12100Eu;
+    } else {
+        scene->sky_top = 0xFF7EB8E8u;
+        scene->sky_bottom = 0xFFE5F0CBu;
+    }
+}
+
 void zelda_voxel_post_render(uint32_t *framebuffer) {
     NesVoxelScene scene;
     int gameplay_visible;
@@ -522,8 +545,7 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
     scene.preserve_top_rows = ZELDA_PLAYFIELD_Y;
     scene.extend_preserved_rows = 1;
     scene.preserved_rows_fill = 0xFF000000u;
-    scene.sky_top = 0xFF7EB8E8u;
-    scene.sky_bottom = 0xFFE5F0CBu;
+    configure_scene_backdrop(&scene);
     if (nes_voxel_render(&scene)) {
         memcpy(s_stable_frame, framebuffer, sizeof(s_stable_frame));
         s_stable_frame_valid = 1;

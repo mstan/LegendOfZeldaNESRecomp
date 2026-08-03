@@ -1,18 +1,61 @@
-# Reproduce an overworld room scroll from the deterministic gameplay state.
+# Exercise each scrolling direction from one deterministic overworld state.
 TURBO ON
 WAIT 2
+
+# Down
 LOAD_STATE tests/voxel_camera_test.nss
-WAIT 8
-SCREENSHOT zelda_voxel_transition_before.png
 WAIT 2
+WRITE_RAM8 0070 78
 WRITE_RAM8 0084 DD
 HOLD DOWN
 WAIT_RAM8 0012 07
-WAIT 8
-SCREENSHOT zelda_voxel_transition.png
+WAIT 35
+SCREENSHOT zelda_voxel_transition_down.png
 RELEASE DOWN
 WAIT_RAM8 0012 05
 WAIT 8
-SCREENSHOT zelda_voxel_transition_settled.png
+SCREENSHOT zelda_voxel_transition_down_settled.png
+
+# Up
+LOAD_STATE tests/voxel_camera_test.nss
 WAIT 2
+WRITE_RAM8 0070 78
+WRITE_RAM8 0084 3D
+HOLD UP
+WAIT_RAM8 0012 07
+WAIT 35
+SCREENSHOT zelda_voxel_transition_up.png
+RELEASE UP
+WAIT_RAM8 0012 05
+WAIT 8
+SCREENSHOT zelda_voxel_transition_up_settled.png
+
+# Right
+LOAD_STATE tests/voxel_camera_test.nss
+WAIT 2
+WRITE_RAM8 0070 F1
+WRITE_RAM8 0084 B0
+HOLD RIGHT
+WAIT_RAM8 0012 07
+WAIT 35
+SCREENSHOT zelda_voxel_transition_right.png
+RELEASE RIGHT
+WAIT_RAM8 0012 05
+WAIT 8
+SCREENSHOT zelda_voxel_transition_right_settled.png
+
+# Left
+LOAD_STATE tests/voxel_camera_test.nss
+WAIT 2
+WRITE_RAM8 0070 00
+WRITE_RAM8 0084 B0
+HOLD LEFT
+WAIT_RAM8 0012 07
+WAIT 35
+SCREENSHOT zelda_voxel_transition_left.png
+RELEASE LEFT
+WAIT_RAM8 0012 05
+WAIT 8
+SCREENSHOT zelda_voxel_transition_left_settled.png
+
 EXIT 0
