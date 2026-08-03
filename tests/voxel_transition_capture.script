@@ -1,0 +1,18 @@
+# Reproduce an overworld room scroll from the deterministic gameplay state.
+TURBO ON
+WAIT 2
+LOAD_STATE tests/voxel_camera_test.nss
+WAIT 8
+SCREENSHOT zelda_voxel_transition_before.png
+WAIT 2
+WRITE_RAM8 0084 DD
+HOLD DOWN
+WAIT_RAM8 0012 07
+WAIT 8
+SCREENSHOT zelda_voxel_transition.png
+RELEASE DOWN
+WAIT_RAM8 0012 05
+WAIT 8
+SCREENSHOT zelda_voxel_transition_settled.png
+WAIT 2
+EXIT 0

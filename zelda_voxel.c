@@ -23,6 +23,8 @@
 #define ZELDA_TILE_ROWS         22
 #define ZELDA_TILE_COUNT        (ZELDA_TILE_COLUMNS * ZELDA_TILE_ROWS)
 #define ZELDA_WIDE_MARGIN       85
+#define ZELDA_OUTPUT_WIDTH      (ZELDA_PLAYFIELD_WIDTH + ZELDA_WIDE_MARGIN * 2)
+#define ZELDA_OUTPUT_HEIGHT     240
 
 /* CPU $6530 maps to g_sram[$0530].  Columns are contiguous 22-byte runs. */
 #define ZELDA_PLAY_AREA_TILES   (g_sram + 0x0530)
@@ -30,6 +32,9 @@
 static float s_heights[ZELDA_TILE_COUNT];
 static uint8_t s_classification[ZELDA_TILE_COUNT];
 static int s_queue[ZELDA_TILE_COUNT];
+static uint32_t s_stable_frame[ZELDA_OUTPUT_WIDTH * ZELDA_OUTPUT_HEIGHT];
+static int s_stable_frame_valid;
+static int s_was_scrolling;
 static int s_mod_enabled;
 static int s_view_enabled;
 static int s_pitch = 35;
@@ -44,6 +49,7 @@ static int s_default_zoom = 100;
 static int s_default_sprite_scale = 135;
 
 static int gameplay_scene_visible(void);
+static int scrolling_scene_visible(void);
 
 static int tile_index(int x, int y) {
     return x * ZELDA_TILE_ROWS + y;
@@ -123,9 +129,23 @@ static float zelda_tile_height(uint8_t tile, int x, int y, void *user) {
     return s_heights[tile_index(x, y)];
 }
 
+static int zelda_sprite_overlay(int min_x, int min_y,
+                                int max_x, int max_y, void *user) {
+    int link_center_x = g_ram[0x0070] + 8; /* Link_X is his left edge. */
+    int link_top_y = g_ram[0x0084] + 3;    /* OAM Y trails Link_Y slightly. */
+    int card_center_x = (min_x + max_x) / 2;
+    (void)user;
+    return abs(card_center_x - link_center_x) <= 8 &&
+           abs(min_y - link_top_y) <= 8;
+}
+
 void zelda_voxel_set_mod_enabled(int enabled) {
     s_mod_enabled = enabled != 0;
     s_view_enabled = s_mod_enabled;
+    if (!s_mod_enabled) {
+        s_stable_frame_valid = 0;
+        s_was_scrolling = 0;
+    }
 }
 
 void zelda_voxel_configure_mod(int pitch, int yaw, int roll,
@@ -139,7 +159,7 @@ void zelda_voxel_configure_mod(int pitch, int yaw, int roll,
 
 void zelda_voxel_init(void) {
     if (s_mod_enabled) {
-        g_render_width = ZELDA_PLAYFIELD_WIDTH + ZELDA_WIDE_MARGIN * 2;
+        g_render_width = ZELDA_OUTPUT_WIDTH;
         g_widescreen_left = ZELDA_WIDE_MARGIN;
         g_widescreen_right = ZELDA_WIDE_MARGIN;
         printf("[Voxel] Zelda diorama enabled: pitch=%d yaw=%d roll=%d "
@@ -212,6 +232,8 @@ void zelda_voxel_update_hotkey(void) {
     {
         int margin = s_view_enabled && gameplay_scene_visible()
             ? ZELDA_WIDE_MARGIN : 0;
+        if (s_view_enabled && (scrolling_scene_visible() || s_was_scrolling))
+            margin = ZELDA_WIDE_MARGIN;
         g_ws_eff_left = margin;
         g_ws_eff_right = margin;
     }
@@ -225,15 +247,48 @@ static int gameplay_scene_visible(void) {
     return 1;
 }
 
+static int scrolling_scene_visible(void) {
+    uint8_t mode = g_ram[0x0012]; /* Mode 6 initializes, mode 7 scrolls. */
+    return mode == 6 || mode == 7;
+}
+
 void zelda_voxel_post_render(uint32_t *framebuffer) {
     NesVoxelScene scene;
-    if (!s_mod_enabled || !s_view_enabled || !gameplay_scene_visible()) return;
+    int gameplay_visible;
+    int roll_fit_percent;
+    if (!s_mod_enabled || !s_view_enabled) return;
+    gameplay_visible = gameplay_scene_visible();
+    if (scrolling_scene_visible() || (s_was_scrolling && !gameplay_visible)) {
+        /* PlayAreaTiles and the second nametable are intentionally incomplete
+         * while Zelda streams the destination room. Keep the last coherent
+         * diorama instead of exposing a flat 256-wide frame or projecting
+         * partially transferred tile data. The first stable destination frame
+         * below replaces this cache atomically. */
+        if (s_stable_frame_valid) {
+            memcpy(framebuffer, s_stable_frame, sizeof(s_stable_frame));
+        }
+        if (!s_was_scrolling) {
+            printf("[Voxel] room scroll: holding stable diorama (cache=%s)\n",
+                   s_stable_frame_valid ? "ready" : "empty");
+        }
+        s_was_scrolling = 1;
+        return;
+    }
+    if (!gameplay_visible) {
+        if (s_stable_frame_valid) {
+            printf("[Voxel] scene mode %u invalidated stable diorama\n",
+                   (unsigned)g_ram[0x0012]);
+        }
+        s_stable_frame_valid = 0;
+        s_was_scrolling = 0;
+        return;
+    }
 
     classify_tiles();
     memset(&scene, 0, sizeof(scene));
     scene.framebuffer = framebuffer;
     scene.output_width = g_render_width;
-    scene.output_height = 240;
+    scene.output_height = ZELDA_OUTPUT_HEIGHT;
     scene.source_x = g_widescreen_left + ZELDA_PLAYFIELD_X;
     scene.source_y = ZELDA_PLAYFIELD_Y;
     scene.source_width = ZELDA_PLAYFIELD_WIDTH;
@@ -248,13 +303,28 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
     scene.elevation_degrees = (float)s_pitch;
     scene.yaw_degrees = (float)s_yaw;
     scene.roll_degrees = (float)s_roll;
-    scene.camera_distance = 285.0f * 100.0f / (float)s_zoom;
+    /* A rolled rectangle needs more room than an axis-aligned one. Preserve
+     * the user's zoom intent while automatically fitting the rotated playfield
+     * inside the 426x240 presentation surface. */
+    roll_fit_percent = 100 + abs(s_roll);
+    scene.camera_distance =
+        285.0f * 100.0f * (float)roll_fit_percent /
+        ((float)s_zoom * 100.0f);
     scene.sprite_scale = (float)s_sprite_scale / 100.0f;
+    scene.sprite_face_camera_pitch = 1;
+    scene.sprite_depth_bias = 1.0f;
+    scene.sprite_overlay = zelda_sprite_overlay;
     scene.draw_oam_sprites = 1;
     scene.preserve_top_rows = ZELDA_PLAYFIELD_Y;
     scene.extend_preserved_rows = 1;
     scene.preserved_rows_fill = 0xFF000000u;
     scene.sky_top = 0xFF7EB8E8u;
     scene.sky_bottom = 0xFFE5F0CBu;
-    nes_voxel_render(&scene);
+    if (nes_voxel_render(&scene)) {
+        memcpy(s_stable_frame, framebuffer, sizeof(s_stable_frame));
+        s_stable_frame_valid = 1;
+        if (s_was_scrolling)
+            printf("[Voxel] room scroll: destination diorama ready\n");
+        s_was_scrolling = 0;
+    }
 }

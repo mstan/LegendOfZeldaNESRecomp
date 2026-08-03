@@ -26,3 +26,4 @@ build_ui/
 build-voxel*/
 build-mods*/
 zelda_voxel.png
+tests/*.nss

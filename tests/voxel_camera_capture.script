@@ -1,0 +1,8 @@
+# Re-render one deterministic gameplay state under the package's camera values.
+TURBO ON
+WAIT 2
+LOAD_STATE tests/voxel_camera_test.nss
+WAIT 8
+SCREENSHOT zelda_voxel_camera.png
+WAIT 2
+EXIT 0

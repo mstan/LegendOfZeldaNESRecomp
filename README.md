@@ -67,11 +67,14 @@ flat and pillarboxed.
 
 Geometry comes from Zelda's live 32x22 `PlayAreaTiles` grid and its collision
 classification. The original frame supplies tile textures, while current OAM
-pieces are assembled into coherent, upright metasprite cards before projection.
-The black HUD field is extended across the widescreen frame while the original
-HUD remains centered and pixel-perfect. This is a presentation-only trusted
-plugin: normal execution, the stock ROM, saves, and launches with the feature
-disabled are unchanged.
+pieces are assembled into coherent camera-facing metasprite cards before
+projection. Link receives a player-only visibility pass at low angles; other
+actors retain normal terrain occlusion. Room scrolling holds the last complete
+diorama while Zelda streams its next nametable, then replaces it atomically
+with the completed destination room. The black HUD field is extended across
+the widescreen frame while the original HUD remains centered and pixel-perfect.
+This is a presentation-only trusted plugin: normal execution, the stock ROM,
+saves, and launches with the feature disabled are unchanged.
 
 ## Building from Source
 

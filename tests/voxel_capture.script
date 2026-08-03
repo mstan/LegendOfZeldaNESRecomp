@@ -45,6 +45,7 @@ WAIT 8
 RELEASE START
 WAIT_RAM8 00E1 00
 WAIT 180
+SAVE_STATE tests/voxel_camera_test.nss
 SCREENSHOT zelda_voxel.png
 WAIT 2
 EXIT 0
