@@ -48,6 +48,26 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
 | F5     | Toggle turbo (fast-forward) |
 | F6     | Save state |
 | F7     | Load state |
+| 3      | Cycle 3D diorama OFF / 15° / 35° / 50° / 75° |
+
+## Experimental 3D Diorama
+
+Start the game with `--voxel` to turn the overworld and dungeon playfields
+into a depth-buffered 3D diorama:
+
+```bash
+LegendOfZeldaNESRecomp.exe "path/to/zelda.nes" --voxel 35
+```
+
+The angle is optional and snaps to 15, 35, 50, or 75 degrees. Press `3` while
+playing to cycle the effect. Title, registration, and inventory screens remain
+flat and pillarboxed.
+
+Geometry comes from Zelda's live 32x22 `PlayAreaTiles` grid and its collision
+classification. The original frame supplies tile textures, while current OAM
+sprites are decoded into upright cards. This is a presentation-only layer:
+normal execution, saves, and the default launch without `--voxel` are
+unchanged.
 
 ## Building from Source
 
@@ -82,6 +102,7 @@ This is a **static recompiler**, not an emulator. The original 6502 machine code
 
 - `game.cfg` — recompiler configuration (bank switch, inline dispatch, extra functions, extra labels)
 - `extras.c` — game-specific hooks (SRAM persistence, entity diagnostics)
+- `zelda_voxel.c` — Zelda tile-height profile and 3D view controls
 - `generated/` — auto-generated C code (do not edit manually)
 - `nesrecomp/` — framework submodule (recompiler + runner)
 

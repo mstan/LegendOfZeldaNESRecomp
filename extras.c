@@ -15,6 +15,7 @@
 #include "input_script.h"
 #include "recomp_stack.h"
 #include "save_ram.h"
+#include "zelda_voxel.h"
 #ifdef ENABLE_NESTOPIA_ORACLE
 #include "nestopia_bridge.h"
 #endif
@@ -121,6 +122,7 @@ void game_on_init(void) {
          * zelda.srm next to the exe is migrated on first run. */
     }
 
+    zelda_voxel_init();
     s_debug_enabled = check_debug_ini();
 
     if (s_debug_enabled) {
@@ -140,6 +142,7 @@ void game_on_init(void) {
 }
 
 void game_on_frame(uint64_t frame_count) {
+    zelda_voxel_update_hotkey();
     if (s_debug_enabled) {
         debug_server_poll();
         debug_server_wait_if_paused();
@@ -158,6 +161,10 @@ void game_post_nmi(uint64_t frame_count) {
 }
 
 int game_handle_arg(const char *key, const char *val) {
+    if (strcmp(key, "--voxel") == 0) {
+        zelda_voxel_configure_arg(val);
+        return 1;
+    }
     if (strcmp(key, "--tcp-port") == 0 && val) {
         s_tcp_port = atoi(val);
         printf("[Debug] TCP port set to %d\n", s_tcp_port);
@@ -180,7 +187,9 @@ int game_handle_arg(const char *key, const char *val) {
 const char *game_arg_usage(void) {
     return "  --tcp-port PORT     TCP debug server port (default 4370)\n"
            "  --verify            Enable dual-execution verify mode (Nestopia oracle)\n"
-           "  --emulated          Run purely via Nestopia emulator (no recompiled code)\n";
+           "  --emulated          Run purely via Nestopia emulator (no recompiled code)\n"
+           "  --voxel [ANGLE]     3D diorama view (15, 35, 50, or 75; default 35)\n"
+           "                       Press 3 to cycle OFF/15/35/50/75 degrees\n";
 }
 
 void game_run_nmi(void) {
@@ -307,7 +316,9 @@ void game_fill_frame_record(void *record) {
     r->game_data[15] = g_ram[0x0340];  /* CurObjIndex ($0340) */
 }
 
-void game_post_render(uint32_t *framebuf) { (void)framebuf; }
+void game_post_render(uint32_t *framebuf) {
+    zelda_voxel_post_render(framebuf);
+}
 
 int game_handle_debug_cmd(const char *cmd, int id, const char *json) {
     (void)json;

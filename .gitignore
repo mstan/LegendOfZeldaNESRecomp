@@ -21,3 +21,7 @@ hdpack/
 nestopia-core
 
 build_ui/
+
+# Local voxel development and visual-capture artifacts
+build-voxel*/
+zelda_voxel.png

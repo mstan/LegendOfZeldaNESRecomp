@@ -4,7 +4,14 @@ project(LegendOfZeldaNESRecomp C CXX)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 
-set(NESRECOMP_ROOT ${CMAKE_SOURCE_DIR}/nesrecomp)
+set(NESRECOMP_ROOT "${CMAKE_SOURCE_DIR}/nesrecomp" CACHE PATH
+    "Path to the NESRecomp source tree")
+set(RECOMP_UI_ROOT "${CMAKE_SOURCE_DIR}/recomp-ui" CACHE PATH
+    "Path to the recomp-ui source tree")
+set(ZELDA_STOCK_GENERATED_ROOT "${CMAKE_SOURCE_DIR}/generated" CACHE PATH
+    "Path containing the generated stock Zelda recompilation sources")
+set(ZELDA_HD_GENERATED_ROOT "${CMAKE_SOURCE_DIR}/generated" CACHE PATH
+    "Path containing the generated Zelda HD recompilation sources")
 
 # nesrecomp/ and recomp-ui/ are git submodules (see .gitmodules); the pinned
 # commit is the gitlink recorded in this repo. After cloning run setup.sh/.bat
@@ -19,7 +26,7 @@ find_package(SDL2 REQUIRED)
 # recomp-ui/ is a directory junction -> the shared recomp-ui checkout. Its module
 # defines recomp_target_launcher_ui() (RECOMP_LAUNCHER on the target, staging the
 # launcher assets); called once per game variant below.
-include(${CMAKE_SOURCE_DIR}/recomp-ui/recomp_ui.cmake)
+include(${RECOMP_UI_ROOT}/recomp_ui.cmake)
 
 # ---- Game variants: stock + HD (two builds from one project) ----
 # See _zelda_release.bat / the "Cutting a release" section in CLAUDE.md.
@@ -33,14 +40,20 @@ include(${CMAKE_SOURCE_DIR}/recomp-ui/recomp_ui.cmake)
 # and renames the recompiler's "zelda_*" output to the per-variant prefix). They
 # are separate executables, so the identical func_* symbols never collide.
 function(add_zelda_variant TARGET GEN_PREFIX IS_STOCK)
+    if(IS_STOCK)
+        set(GENERATED_ROOT "${ZELDA_STOCK_GENERATED_ROOT}")
+    else()
+        set(GENERATED_ROOT "${ZELDA_HD_GENERATED_ROOT}")
+    endif()
     add_executable(${TARGET}
         ${NESRECOMP_RUNNER_SOURCES}
         extras.c
+        zelda_voxel.c
         nes_snapshot.c
         verify_mode.c
         watchdog.c
-        generated/${GEN_PREFIX}_full.c
-        generated/${GEN_PREFIX}_dispatch.c
+        ${GENERATED_ROOT}/${GEN_PREFIX}_full.c
+        ${GENERATED_ROOT}/${GEN_PREFIX}_dispatch.c
     )
 
     target_compile_definitions(${TARGET} PRIVATE RECOMP_STACK_TRACKING WATCHDOG_ENABLED)
