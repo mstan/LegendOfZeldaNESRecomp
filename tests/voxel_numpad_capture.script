@@ -14,11 +14,15 @@ WAIT 2
 KEY_TAP KP_PLUS
 WAIT 2
 KEY_TAP KP3
-WAIT 4
+WAIT 1
+SCREENSHOT zelda_voxel_numpad_tweening.png
+WAIT 19
 SCREENSHOT zelda_voxel_numpad_adjusted.png
 WAIT 2
 KEY_TAP KP5
-WAIT 4
+WAIT 1
+SCREENSHOT zelda_voxel_numpad_reset_tweening.png
+WAIT 23
 SCREENSHOT zelda_voxel_numpad_reset.png
 WAIT 2
 KEY_TAP KP0

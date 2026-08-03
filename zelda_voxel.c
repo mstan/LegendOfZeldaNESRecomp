@@ -12,7 +12,6 @@
 
 #include <SDL.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 
 #define ZELDA_PLAYFIELD_X       0
@@ -59,6 +58,11 @@ static int s_yaw = -20;
 static int s_roll;
 static int s_zoom = 100;
 static int s_sprite_scale = 135;
+static float s_render_pitch = 35.0f;
+static float s_render_yaw = -20.0f;
+static float s_render_roll;
+static float s_render_zoom = 100.0f;
+static float s_render_sprite_scale = 135.0f;
 static int s_default_pitch = 35;
 static int s_default_yaw = -20;
 static int s_default_roll;
@@ -68,6 +72,7 @@ static int s_default_sprite_scale = 135;
 static int gameplay_scene_visible(void);
 static int scrolling_scene_visible(void);
 static void configure_scene_backdrop(NesVoxelScene *scene);
+static void update_render_controls(void);
 static int clamp_int(int value, int low, int high);
 
 static int tile_index(int x, int y) {
@@ -339,6 +344,11 @@ void zelda_voxel_configure_mod(int pitch, int yaw, int roll,
     s_roll = s_default_roll = roll;
     s_zoom = s_default_zoom = zoom_percent;
     s_sprite_scale = s_default_sprite_scale = sprite_scale_percent;
+    s_render_pitch = (float)pitch;
+    s_render_yaw = (float)yaw;
+    s_render_roll = (float)roll;
+    s_render_zoom = (float)zoom_percent;
+    s_render_sprite_scale = (float)sprite_scale_percent;
 }
 
 void zelda_voxel_init(void) {
@@ -361,10 +371,14 @@ static int clamp_int(int value, int low, int high) {
 void zelda_voxel_handle_event(const SDL_Event *event) {
     int changed = 0;
     SDL_Scancode key;
-    if (!s_mod_enabled || !event || event->type != SDL_KEYDOWN ||
-        event->key.repeat)
+    if (!s_mod_enabled || !event || event->type != SDL_KEYDOWN)
         return;
     key = event->key.keysym.scancode;
+    /* Adjustment keys honor SDL repeat so holding a numpad direction sweeps
+     * the target. Keep the toggle and reset edge-triggered. */
+    if (event->key.repeat &&
+        (key == SDL_SCANCODE_KP_0 || key == SDL_SCANCODE_KP_5))
+        return;
     switch (key) {
         case SDL_SCANCODE_KP_0:
             s_view_enabled = !s_view_enabled; changed = 1; break;
@@ -409,8 +423,24 @@ void zelda_voxel_handle_event(const SDL_Event *event) {
     }
 }
 
+static float ease_control(float current, float target) {
+    float delta = target - current;
+    if (delta > -0.05f && delta < 0.05f) return target;
+    return current + delta * 0.25f;
+}
+
+static void update_render_controls(void) {
+    s_render_pitch = ease_control(s_render_pitch, (float)s_pitch);
+    s_render_yaw = ease_control(s_render_yaw, (float)s_yaw);
+    s_render_roll = ease_control(s_render_roll, (float)s_roll);
+    s_render_zoom = ease_control(s_render_zoom, (float)s_zoom);
+    s_render_sprite_scale =
+        ease_control(s_render_sprite_scale, (float)s_sprite_scale);
+}
+
 void zelda_voxel_update_hotkey(void) {
     if (!s_mod_enabled) return;
+    update_render_controls();
     /* Keep menus and title screens centered instead of exposing wrapped
      * nametable content in the fixed 16:9 framebuffer. */
     {
@@ -468,7 +498,7 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
     NesVoxelScene scene;
     int gameplay_visible;
     int transition_visible;
-    int roll_fit_percent;
+    float roll_fit_percent;
     if (!s_mod_enabled || !s_view_enabled) return;
     gameplay_visible = gameplay_scene_visible();
     transition_visible = g_ram[0x0012] == 7;
@@ -522,17 +552,17 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
         scene.column_major = 1;
         scene.tile_height = zelda_tile_height;
     }
-    scene.elevation_degrees = (float)s_pitch;
-    scene.yaw_degrees = (float)s_yaw;
-    scene.roll_degrees = (float)s_roll;
+    scene.elevation_degrees = s_render_pitch;
+    scene.yaw_degrees = s_render_yaw;
+    scene.roll_degrees = s_render_roll;
     /* A rolled rectangle needs more room than an axis-aligned one. Preserve
      * the user's zoom intent while automatically fitting the rotated playfield
      * inside the 426x240 presentation surface. */
-    roll_fit_percent = 100 + abs(s_roll);
+    roll_fit_percent =
+        100.0f + (s_render_roll < 0.0f ? -s_render_roll : s_render_roll);
     scene.camera_distance =
-        285.0f * 100.0f * (float)roll_fit_percent /
-        ((float)s_zoom * 100.0f);
-    scene.sprite_scale = (float)s_sprite_scale / 100.0f;
+        285.0f * roll_fit_percent / s_render_zoom;
+    scene.sprite_scale = s_render_sprite_scale / 100.0f;
     scene.sprite_face_camera_pitch = 1;
     scene.sprite_constant_screen_size = 1;
     scene.sprite_depth_bias = 1.0f;
