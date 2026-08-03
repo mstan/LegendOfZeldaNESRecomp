@@ -1,0 +1,33 @@
+# Capture actor grounding at materially different camera yaw angles.
+TURBO ON
+WAIT 2
+LOAD_STATE tests/voxel_camera_test.nss
+WAIT 8
+SCREENSHOT zelda_voxel_sprite_yaw_default.png
+
+KEY_TAP KP6
+KEY_TAP KP6
+KEY_TAP KP6
+KEY_TAP KP6
+KEY_TAP KP6
+KEY_TAP KP6
+KEY_TAP KP6
+KEY_TAP KP6
+KEY_TAP KP6
+WAIT 24
+SCREENSHOT zelda_voxel_sprite_yaw_positive.png
+
+KEY_TAP KP5
+WAIT 24
+KEY_TAP KP4
+KEY_TAP KP4
+KEY_TAP KP4
+KEY_TAP KP4
+KEY_TAP KP4
+KEY_TAP KP4
+KEY_TAP KP4
+KEY_TAP KP4
+KEY_TAP KP4
+WAIT 24
+SCREENSHOT zelda_voxel_sprite_yaw_negative.png
+EXIT 0

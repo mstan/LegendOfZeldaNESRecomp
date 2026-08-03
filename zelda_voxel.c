@@ -200,6 +200,17 @@ static float zelda_sprite_ground(int min_x, int min_y,
     return 0.0f;
 }
 
+static float zelda_sprite_shadow(int min_x, int min_y,
+                                 int max_x, int max_y, void *user) {
+    int width = max_x - min_x;
+    int height = max_y - min_y;
+    (void)user;
+    /* Zelda builds Link and its standing actors from connected pieces at
+     * least 12 pixels wide. Narrow OAM cards are usually swords, projectiles,
+     * pickups, or transient effects and should not cast character shadows. */
+    return width >= 12 && height >= 12 ? 1.0f : 0.0f;
+}
+
 static uint8_t room_tile_palette(const uint8_t *attrs, int x, int y) {
     uint8_t attr = attrs[(y / 4) * ZELDA_ATTR_COLUMNS + x / 4];
     int shift = ((x & 2) ? 2 : 0) + ((y & 2) ? 4 : 0);
@@ -658,6 +669,9 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
     scene.sprite_constant_screen_size = 1;
     scene.sprite_depth_bias = 1.0f;
     scene.sprite_ground = zelda_sprite_ground;
+    scene.sprite_shadow = zelda_sprite_shadow;
+    scene.sprite_shadow_scale = 0.62f;
+    scene.sprite_shadow_opacity = 0.34f;
     scene.sprite_overlay = zelda_sprite_overlay;
     scene.draw_oam_sprites = !world_unfurl_active();
     scene.preserve_top_rows = ZELDA_PLAYFIELD_Y;
