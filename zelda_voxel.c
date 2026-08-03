@@ -151,15 +151,6 @@ static float zelda_tile_height(uint8_t tile, int x, int y, void *user) {
     return s_heights[tile_index(x, y)];
 }
 
-static int zelda_sprite_is_link(int min_x, int min_y, int max_x, int max_y) {
-    int link_center_x = g_ram[0x0070] + 8; /* Link_X is his left edge. */
-    int link_top_y = g_ram[0x0084] + 3;    /* OAM Y trails Link_Y slightly. */
-    int card_center_x = (min_x + max_x) / 2;
-    (void)max_y;
-    return abs(card_center_x - link_center_x) <= 8 &&
-           abs(min_y - link_top_y) <= 8;
-}
-
 static int zelda_sprite_overlay(int min_x, int min_y,
                                 int max_x, int max_y, void *user) {
     (void)min_x;
@@ -167,19 +158,24 @@ static int zelda_sprite_overlay(int min_x, int min_y,
     (void)max_x;
     (void)max_y;
     (void)user;
-    /* Respect terrain depth. Forcing Link over foreground walls makes a
-     * top-down overlap look like he teleported onto their roofs. */
+    /* Respect terrain depth. Forcing actors over foreground walls makes a
+     * top-down overlap look like they teleported onto their roofs. */
     return 0;
 }
 
 static float zelda_sprite_ground(int min_x, int min_y,
                                  int max_x, int max_y,
                                  float sampled_ground, void *user) {
+    (void)min_x;
+    (void)min_y;
+    (void)max_x;
+    (void)max_y;
+    (void)sampled_ground;
     (void)user;
-    /* Zelda has no traversable raised layers. Link can stand visually above a
-     * wall due to top-down overlap, but never on its extruded roof. */
-    if (zelda_sprite_is_link(min_x, min_y, max_x, max_y)) return 0.0f;
-    return sampled_ground;
+    /* Zelda has no traversable raised layers. Actors can overlap a wall in the
+     * top-down source image, but Link, enemies, pickups, and effects all remain
+     * on the playfield floor rather than teleporting onto an extruded roof. */
+    return 0.0f;
 }
 
 static uint8_t room_tile_palette(const uint8_t *attrs, int x, int y) {
