@@ -24,4 +24,5 @@ build_ui/
 
 # Local voxel development and visual-capture artifacts
 build-voxel*/
+build-mods*/
 zelda_voxel.png

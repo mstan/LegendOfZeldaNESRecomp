@@ -48,26 +48,30 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
 | F5     | Toggle turbo (fast-forward) |
 | F6     | Save state |
 | F7     | Load state |
-| 3      | Cycle 3D diorama OFF / 15° / 35° / 50° / 75° |
+| Numpad 0 | Toggle the 3D diorama |
+| Numpad 8 / 2 | Increase / decrease camera pitch |
+| Numpad 4 / 6 | Orbit camera left / right (yaw) |
+| Numpad 7 / 9 | Roll camera left / right |
+| Numpad + / - | Zoom in / out |
+| Numpad 1 / 3 | Shrink / enlarge assembled sprites |
+| Numpad 5 | Reset the live camera rig to package defaults |
 
-## Experimental 3D Diorama
+## 3D Voxel Diorama Mod
 
-Start the game with `--voxel` to turn the overworld and dungeon playfields
-into a depth-buffered 3D diorama:
-
-```bash
-LegendOfZeldaNESRecomp.exe "path/to/zelda.nes" --voxel 35
-```
-
-The angle is optional and snaps to 15, 35, 50, or 75 degrees. Press `3` while
-playing to cycle the effect. Title, registration, and inventory screens remain
+Open **Mods** in the launcher and enable **3D Voxel Diorama**. The bundled
+feature is disabled by default and targets the verified stock PRG0 ROM. Camera
+pitch, yaw, roll, zoom, and sprite scale can be saved as package options. The
+numpad controls above provide temporary live experimentation; they do not
+rewrite `mods/state.toml`. Title, registration, and inventory screens remain
 flat and pillarboxed.
 
 Geometry comes from Zelda's live 32x22 `PlayAreaTiles` grid and its collision
 classification. The original frame supplies tile textures, while current OAM
-sprites are decoded into upright cards. This is a presentation-only layer:
-normal execution, saves, and the default launch without `--voxel` are
-unchanged.
+pieces are assembled into coherent, upright metasprite cards before projection.
+The black HUD field is extended across the widescreen frame while the original
+HUD remains centered and pixel-perfect. This is a presentation-only trusted
+plugin: normal execution, the stock ROM, saves, and launches with the feature
+disabled are unchanged.
 
 ## Building from Source
 

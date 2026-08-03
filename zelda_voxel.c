@@ -27,13 +27,21 @@
 /* CPU $6530 maps to g_sram[$0530].  Columns are contiguous 22-byte runs. */
 #define ZELDA_PLAY_AREA_TILES   (g_sram + 0x0530)
 
-static const int s_angles[] = { 0, 15, 35, 50, 75 };
 static float s_heights[ZELDA_TILE_COUNT];
 static uint8_t s_classification[ZELDA_TILE_COUNT];
 static int s_queue[ZELDA_TILE_COUNT];
-static int s_angle_index;
-static int s_requested_at_startup;
-static int s_key_was_down;
+static int s_mod_enabled;
+static int s_view_enabled;
+static int s_pitch = 35;
+static int s_yaw = -20;
+static int s_roll;
+static int s_zoom = 100;
+static int s_sprite_scale = 135;
+static int s_default_pitch = 35;
+static int s_default_yaw = -20;
+static int s_default_roll;
+static int s_default_zoom = 100;
+static int s_default_sprite_scale = 135;
 
 static int gameplay_scene_visible(void);
 
@@ -115,55 +123,94 @@ static float zelda_tile_height(uint8_t tile, int x, int y, void *user) {
     return s_heights[tile_index(x, y)];
 }
 
-static int angle_index_from_value(const char *value) {
-    int requested = value ? atoi(value) : 35;
-    int best = 1;
-    int best_distance = abs(requested - s_angles[best]);
-    for (int i = 2; i < (int)(sizeof(s_angles) / sizeof(s_angles[0])); i++) {
-        int distance = abs(requested - s_angles[i]);
-        if (distance < best_distance) {
-            best = i;
-            best_distance = distance;
-        }
-    }
-    return best;
+void zelda_voxel_set_mod_enabled(int enabled) {
+    s_mod_enabled = enabled != 0;
+    s_view_enabled = s_mod_enabled;
 }
 
-void zelda_voxel_configure_arg(const char *value) {
-    s_requested_at_startup = 1;
-    s_angle_index = angle_index_from_value(value);
+void zelda_voxel_configure_mod(int pitch, int yaw, int roll,
+                               int zoom_percent, int sprite_scale_percent) {
+    s_pitch = s_default_pitch = pitch;
+    s_yaw = s_default_yaw = yaw;
+    s_roll = s_default_roll = roll;
+    s_zoom = s_default_zoom = zoom_percent;
+    s_sprite_scale = s_default_sprite_scale = sprite_scale_percent;
 }
 
 void zelda_voxel_init(void) {
-    if (s_requested_at_startup) {
+    if (s_mod_enabled) {
         g_render_width = ZELDA_PLAYFIELD_WIDTH + ZELDA_WIDE_MARGIN * 2;
         g_widescreen_left = ZELDA_WIDE_MARGIN;
         g_widescreen_right = ZELDA_WIDE_MARGIN;
-        printf("[Voxel] Zelda diorama enabled at %d degrees (key 3 cycles views)\n",
-               s_angles[s_angle_index]);
+        printf("[Voxel] Zelda diorama enabled: pitch=%d yaw=%d roll=%d "
+               "zoom=%d%% sprites=%d%% (numpad adjusts)\n",
+               s_pitch, s_yaw, s_roll, s_zoom, s_sprite_scale);
+    }
+}
+
+static int clamp_int(int value, int low, int high) {
+    if (value < low) return low;
+    if (value > high) return high;
+    return value;
+}
+
+void zelda_voxel_handle_event(const SDL_Event *event) {
+    int changed = 0;
+    SDL_Scancode key;
+    if (!s_mod_enabled || !event || event->type != SDL_KEYDOWN ||
+        event->key.repeat)
+        return;
+    key = event->key.keysym.scancode;
+    switch (key) {
+        case SDL_SCANCODE_KP_0:
+            s_view_enabled = !s_view_enabled; changed = 1; break;
+        case SDL_SCANCODE_KP_8:
+            s_pitch = clamp_int(s_pitch + 5, 5, 85); changed = 1; break;
+        case SDL_SCANCODE_KP_2:
+            s_pitch = clamp_int(s_pitch - 5, 5, 85); changed = 1; break;
+        case SDL_SCANCODE_KP_4:
+            s_yaw = clamp_int(s_yaw - 5, -180, 180); changed = 1; break;
+        case SDL_SCANCODE_KP_6:
+            s_yaw = clamp_int(s_yaw + 5, -180, 180); changed = 1; break;
+        case SDL_SCANCODE_KP_7:
+            s_roll = clamp_int(s_roll - 5, -45, 45); changed = 1; break;
+        case SDL_SCANCODE_KP_9:
+            s_roll = clamp_int(s_roll + 5, -45, 45); changed = 1; break;
+        case SDL_SCANCODE_KP_PLUS:
+            s_zoom = clamp_int(s_zoom + 5, 50, 200); changed = 1; break;
+        case SDL_SCANCODE_KP_MINUS:
+            s_zoom = clamp_int(s_zoom - 5, 50, 200); changed = 1; break;
+        case SDL_SCANCODE_KP_1:
+            s_sprite_scale =
+                clamp_int(s_sprite_scale - 10, 75, 250); changed = 1; break;
+        case SDL_SCANCODE_KP_3:
+            s_sprite_scale =
+                clamp_int(s_sprite_scale + 10, 75, 250); changed = 1; break;
+        case SDL_SCANCODE_KP_5:
+            s_pitch = s_default_pitch;
+            s_yaw = s_default_yaw;
+            s_roll = s_default_roll;
+            s_zoom = s_default_zoom;
+            s_sprite_scale = s_default_sprite_scale;
+            s_view_enabled = 1;
+            changed = 1;
+            break;
+        default:
+            break;
+    }
+    if (changed) {
+        printf("[Voxel] %s pitch=%d yaw=%d roll=%d zoom=%d%% sprites=%d%%\n",
+               s_view_enabled ? "on" : "off",
+               s_pitch, s_yaw, s_roll, s_zoom, s_sprite_scale);
     }
 }
 
 void zelda_voxel_update_hotkey(void) {
-    int down = 0;
-    if (SDL_WasInit(SDL_INIT_VIDEO)) {
-        const uint8_t *keys = SDL_GetKeyboardState(NULL);
-        down = keys && keys[SDL_SCANCODE_3];
-    }
-    if (down && !s_key_was_down) {
-        s_angle_index =
-            (s_angle_index + 1) % (int)(sizeof(s_angles) / sizeof(s_angles[0]));
-        printf("[Voxel] view %s",
-               s_angle_index ? "enabled" : "disabled");
-        if (s_angle_index) printf(" at %d degrees", s_angles[s_angle_index]);
-        printf("\n");
-    }
-    s_key_was_down = down;
-
+    if (!s_mod_enabled) return;
     /* Keep menus and title screens centered instead of exposing wrapped
      * nametable content in the fixed 16:9 framebuffer. */
-    if (s_requested_at_startup) {
-        int margin = s_angle_index && gameplay_scene_visible()
+    {
+        int margin = s_view_enabled && gameplay_scene_visible()
             ? ZELDA_WIDE_MARGIN : 0;
         g_ws_eff_left = margin;
         g_ws_eff_right = margin;
@@ -180,7 +227,7 @@ static int gameplay_scene_visible(void) {
 
 void zelda_voxel_post_render(uint32_t *framebuffer) {
     NesVoxelScene scene;
-    if (!s_angle_index || !gameplay_scene_visible()) return;
+    if (!s_mod_enabled || !s_view_enabled || !gameplay_scene_visible()) return;
 
     classify_tiles();
     memset(&scene, 0, sizeof(scene));
@@ -198,7 +245,11 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
     scene.column_major = 1;
     scene.tile_size = 8;
     scene.tile_height = zelda_tile_height;
-    scene.elevation_degrees = (float)s_angles[s_angle_index];
+    scene.elevation_degrees = (float)s_pitch;
+    scene.yaw_degrees = (float)s_yaw;
+    scene.roll_degrees = (float)s_roll;
+    scene.camera_distance = 285.0f * 100.0f / (float)s_zoom;
+    scene.sprite_scale = (float)s_sprite_scale / 100.0f;
     scene.draw_oam_sprites = 1;
     scene.preserve_top_rows = ZELDA_PLAYFIELD_Y;
     scene.extend_preserved_rows = 1;

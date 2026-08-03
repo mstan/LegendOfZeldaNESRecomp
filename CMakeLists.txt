@@ -17,6 +17,10 @@ set(ZELDA_HD_GENERATED_ROOT "${CMAKE_SOURCE_DIR}/generated" CACHE PATH
 # commit is the gitlink recorded in this repo. After cloning run setup.sh/.bat
 # (git submodule update --init) to fetch them at the recorded commits.
 
+# Zelda opts into NESRecomp's package runtime. This also opens recomp-ui's Mods
+# surface; the feature remains disabled until selected in the launcher.
+set(NESRECOMP_ENABLE_MODS ON CACHE BOOL
+    "Enable package mods for Zelda" FORCE)
 include(${NESRECOMP_ROOT}/runner/runner.cmake)
 
 list(APPEND CMAKE_PREFIX_PATH "${NESRECOMP_ROOT}/runner/external/SDL2/cmake")
@@ -49,6 +53,7 @@ function(add_zelda_variant TARGET GEN_PREFIX IS_STOCK)
         ${NESRECOMP_RUNNER_SOURCES}
         extras.c
         zelda_voxel.c
+        mods/zelda_voxel_plugin.c
         nes_snapshot.c
         verify_mode.c
         watchdog.c
@@ -63,10 +68,18 @@ function(add_zelda_variant TARGET GEN_PREFIX IS_STOCK)
     target_compile_definitions(${TARGET} PRIVATE NESRECOMP_GAME_BATTERY)
     # Single-player (one controller) — hide the Player 2 card.
     target_compile_definitions(${TARGET} PRIVATE NESRECOMP_GAME_PLAYERS=1)
+    target_compile_definitions(${TARGET} PRIVATE
+        NESRECOMP_GAME_ID="legend-of-zelda-us"
+        NESRECOMP_GAME_SDL_EVENT_HOOK=zelda_voxel_handle_event)
     if(IS_STOCK)
         # Stock CRC (extras.c) + HD packs disabled (launcher panel hidden, runtime
         # never loads — see hdpack.c / launcher.c).
-        target_compile_definitions(${TARGET} PRIVATE NESRECOMP_GAME_NO_HDPACK)
+        target_compile_definitions(${TARGET} PRIVATE
+            NESRECOMP_GAME_NO_HDPACK
+            NESRECOMP_GAME_ROM_CRC32="3fe272fb")
+    else()
+        target_compile_definitions(${TARGET} PRIVATE
+            NESRECOMP_GAME_ROM_CRC32="fd9c577f")
     endif()
 
     target_include_directories(${TARGET} PRIVATE
@@ -76,7 +89,18 @@ function(add_zelda_variant TARGET GEN_PREFIX IS_STOCK)
     )
 
     target_link_libraries(${TARGET} PRIVATE ${SDL2_LIBRARIES})
-    recomp_target_launcher_ui(${TARGET} BOXART ${CMAKE_SOURCE_DIR}/boxart.tga)
+    recomp_target_launcher_ui(${TARGET}
+        CONSOLE nes
+        BOXART ${CMAKE_SOURCE_DIR}/boxart.tga)
+
+    # Ship built-in packages through the same on-disk catalog used for
+    # user-installed .nesmod archives. copy_directory is additive, so a rebuild
+    # never overwrites mods/state.toml or removes user-installed packages.
+    add_custom_command(TARGET ${TARGET} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_SOURCE_DIR}/mods/preloaded"
+            "$<TARGET_FILE_DIR:${TARGET}>/mods"
+        COMMENT "Staging Zelda's preloaded NES mod packages")
 
     if(WIN32)
         # ws2_32 for the TCP debug server (OpenGL is linked by recomp_ui.cmake).

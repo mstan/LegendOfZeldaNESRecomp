@@ -1,0 +1,29 @@
+#include "mod_runtime.h"
+#include "zelda_voxel.h"
+
+#include <stdio.h>
+
+static void reset_voxel_diorama(void) {
+    zelda_voxel_set_mod_enabled(0);
+}
+
+static void activate_voxel_diorama(void) {
+    const char *package = "legend-of-zelda.enhancement.voxel-diorama";
+    const char *feature = "voxel-diorama";
+    zelda_voxel_configure_mod(
+        nes_mod_get_option_int(package, feature, "pitch", 35),
+        nes_mod_get_option_int(package, feature, "yaw", -20),
+        nes_mod_get_option_int(package, feature, "roll", 0),
+        nes_mod_get_option_int(package, feature, "zoom", 100),
+        nes_mod_get_option_int(package, feature, "sprite-scale", 135));
+    zelda_voxel_set_mod_enabled(1);
+}
+
+NES_MOD_CONSTRUCTOR(zelda_register_voxel_diorama_plugin) {
+    int reset_registered =
+        nes_mod_register_reset_callback(reset_voxel_diorama);
+    int plugin_registered = nes_mod_register_activation_plugin(
+        "legend-of-zelda.voxel-diorama", activate_voxel_diorama);
+    if (!reset_registered || !plugin_registered)
+        fprintf(stderr, "[Mods] Failed to register Zelda voxel plugin\n");
+}
