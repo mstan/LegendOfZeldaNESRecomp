@@ -515,13 +515,16 @@ static int dungeon_exit_scroll_pending(void) {
 static int gameplay_scene_visible(void) {
     uint8_t mode = g_ram[0x0012]; /* GameMode */
     uint8_t submode = g_ram[0x0013]; /* GameSubmode */
-    /* Keep the room behind Link's spin/fade/spark, then hand submodes B/C
-     * back to the native renderer when the GAME OVER text is queued. */
+    /* Keep the room behind Link's spin/fade/spark, then hand death submodes
+     * B/C back to the native renderer when the GAME OVER text is queued.
+     * The end-level ceremony likewise belongs to the live dungeon scene. */
     int death_animation = mode == 0x11 && submode <= 0x0A;
+    int end_level_animation = mode == 0x12;
     int playing =
-        mode == 5 || mode == 9 || mode == 0x0A || mode == 11 || mode == 12 ||
-        mode == 0x10 || mode == 4 || world_unfurl_active() ||
-        death_animation;
+        mode == 5 || mode == 9 || mode == 0x0A ||
+        mode == 0x0B || mode == 0x0C || mode == 0x10 || mode == 4 ||
+        world_unfurl_active() ||
+        death_animation || end_level_animation;
     if (!playing) return 0;
     if (g_ram[0x00E1] != 0) return 0; /* MenuState: preserve sliding inventory */
     return 1;
