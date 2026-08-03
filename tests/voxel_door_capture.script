@@ -1,0 +1,22 @@
+# Reproduce Link's valid north-door approach from the standard voxel state.
+TURBO ON
+WAIT 2
+LOAD_STATE tests/voxel_camera_test.nss
+WAIT 8
+SCREENSHOT zelda_voxel_door_00.png
+HOLD UP
+WAIT 32
+SCREENSHOT zelda_voxel_door_32.png
+WAIT 16
+SCREENSHOT zelda_voxel_door_48.png
+WAIT 8
+SCREENSHOT zelda_voxel_door_56.png
+WAIT 8
+SCREENSHOT zelda_voxel_door_64.png
+WAIT 8
+SCREENSHOT zelda_voxel_door_72.png
+WAIT 8
+SCREENSHOT zelda_voxel_door_80.png
+RELEASE UP
+WAIT 4
+EXIT 0

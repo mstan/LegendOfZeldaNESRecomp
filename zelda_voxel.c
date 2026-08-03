@@ -94,6 +94,28 @@ static int overworld_walkable_exception(uint8_t tile) {
     return 0;
 }
 
+static int overworld_tree_tile(uint8_t tile) {
+    /* Zelda's two scattered-tree metatile families occupy C4-C7 and C8-CB.
+     * The later CE-DF patterns are solid boundary rocks and intentionally
+     * remain extruded terrain. */
+    return tile >= 0xC4 && tile <= 0xCB;
+}
+
+static int overworld_tree_group_member(const uint8_t *tiles, int x, int y) {
+    int anchor_x = x & ~1;
+    int anchor_y = y & ~1;
+    if (anchor_x + 1 >= ZELDA_TILE_COLUMNS ||
+        anchor_y + 1 >= ZELDA_TILE_ROWS)
+        return 0;
+    for (int group_x = 0; group_x < 2; group_x++)
+        for (int group_y = 0; group_y < 2; group_y++)
+            if (!overworld_tree_tile(
+                    tiles[tile_index(anchor_x + group_x,
+                                     anchor_y + group_y)]))
+                return 0;
+    return 1;
+}
+
 static int current_tiles_are_overworld(void) {
     uint8_t mode = g_ram[0x0012];
     uint8_t submode = g_ram[0x0013];
@@ -159,7 +181,17 @@ static void classify_tiles_into(const uint8_t *tiles, float *heights) {
         else if (tail >= 12) height = 17.0f;
         else if (tail >= 4) height = 13.0f;
         else height = 9.0f;
-        for (int i = 0; i < tail; i++) heights[s_queue[i]] = height;
+        for (int i = 0; i < tail; i++) {
+            int index = s_queue[i];
+            /* Forest crowns are rendered below as camera-facing cards. Their
+             * collision footprint remains flat presentation geometry rather
+             * than a square prism. */
+            heights[index] =
+                overworld && overworld_tree_group_member(
+                    tiles, index / ZELDA_TILE_ROWS,
+                    index % ZELDA_TILE_ROWS)
+                    ? 0.0f : height;
+        }
     }
 }
 
@@ -200,15 +232,59 @@ static float zelda_sprite_ground(int min_x, int min_y,
     return 0.0f;
 }
 
+static int zelda_tree_billboard(uint8_t tile, int x, int y,
+                                int *columns, int *rows, void *user) {
+    const NesVoxelScene *scene = (const NesVoxelScene *)user;
+    int anchor_x = x & ~1;
+    int anchor_y = y & ~1;
+    if (!current_tiles_are_overworld() || !overworld_tree_tile(tile))
+        return 0;
+    if (!scene || anchor_x + 1 >= scene->tile_columns ||
+        anchor_y + 1 >= scene->tile_rows)
+        return 0;
+    for (int group_y = 0; group_y < 2; group_y++) {
+        for (int group_x = 0; group_x < 2; group_x++) {
+            int tile_x = anchor_x + group_x;
+            int tile_y = anchor_y + group_y;
+            int index = scene->column_major
+                ? tile_x * scene->tile_stride + tile_y
+                : tile_y * scene->tile_stride + tile_x;
+            if (!overworld_tree_tile(scene->tiles[index]))
+                return 0;
+        }
+    }
+    /* Zelda's outdoor trees are 16x16 metatiles made from four 8x8 CHR
+     * patterns. Even/even is the crown's top-left; the other three cells are
+     * suppressed as terrain and consumed by that one card. */
+    if ((x & 1) || (y & 1)) return -1;
+    *columns = 2;
+    *rows = 2;
+    return 1;
+}
+
+static int zelda_sprite_max_height(const int *members, int member_count,
+                                   void *user) {
+    (void)user;
+    for (int i = 0; i < member_count; i++) {
+        uint8_t tile = g_ppu_oam[members[i] * 4 + 1];
+        /* Link's animation patterns live in the leading sprite tile range.
+         * Doorway-only OAM pieces can touch his normal horizontal pair and
+         * must not turn it into a 16x32 card. */
+        if (tile < 0x20) return 16;
+    }
+    return 0;
+}
+
 static float zelda_sprite_shadow(int min_x, int min_y,
                                  int max_x, int max_y, void *user) {
-    int width = max_x - min_x;
-    int height = max_y - min_y;
+    (void)min_x;
+    (void)min_y;
+    (void)max_x;
+    (void)max_y;
     (void)user;
-    /* Zelda builds Link and its standing actors from connected pieces at
-     * least 12 pixels wide. Narrow OAM cards are usually swords, projectiles,
-     * pickups, or transient effects and should not cast character shadows. */
-    return width >= 12 && height >= 12 ? 1.0f : 0.0f;
+    /* Every reconstructed OAM card gets a proportional contact shadow,
+     * including pickups, weapons, projectiles, and transient effects. */
+    return 1.0f;
 }
 
 static uint8_t room_tile_palette(const uint8_t *attrs, int x, int y) {
@@ -668,10 +744,19 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
     scene.camera_distance =
         285.0f * roll_fit_percent / s_render_zoom;
     scene.sprite_scale = s_render_sprite_scale / 100.0f;
+    scene.user = &scene;
+    if (current_tiles_are_overworld()) {
+        scene.tile_billboard = zelda_tree_billboard;
+        scene.tile_billboard_scale = 1.35f;
+        scene.tile_billboard_shadow_scale = 0.72f;
+        scene.tile_billboard_shadow_opacity = 0.30f;
+    }
     scene.sprite_face_camera_pitch = 1;
     scene.sprite_constant_screen_size = 1;
+    scene.clip_sprites_to_source = 1;
     scene.sprite_depth_bias = 1.0f;
     scene.sprite_ground = zelda_sprite_ground;
+    scene.sprite_max_height = zelda_sprite_max_height;
     scene.sprite_shadow = zelda_sprite_shadow;
     scene.sprite_shadow_scale = 0.62f;
     scene.sprite_shadow_opacity = 0.34f;
