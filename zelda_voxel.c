@@ -534,6 +534,7 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
         ((float)s_zoom * 100.0f);
     scene.sprite_scale = (float)s_sprite_scale / 100.0f;
     scene.sprite_face_camera_pitch = 1;
+    scene.sprite_constant_screen_size = 1;
     scene.sprite_depth_bias = 1.0f;
     scene.sprite_ground = zelda_sprite_ground;
     scene.sprite_overlay = zelda_sprite_overlay;
