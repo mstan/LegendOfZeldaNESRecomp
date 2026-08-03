@@ -428,8 +428,13 @@ void zelda_voxel_update_hotkey(void) {
 
 static int gameplay_scene_visible(void) {
     uint8_t mode = g_ram[0x0012]; /* GameMode */
+    uint8_t submode = g_ram[0x0013]; /* GameSubmode */
+    /* Keep the room behind Link's spin/fade/spark, then hand submodes B/C
+     * back to the native renderer when the GAME OVER text is queued. */
+    int death_animation = mode == 0x11 && submode <= 0x0A;
     int playing =
-        mode == 5 || mode == 9 || mode == 11 || mode == 12 || mode == 0x10;
+        mode == 5 || mode == 9 || mode == 11 || mode == 12 || mode == 0x10 ||
+        death_animation;
     if (!playing) return 0;
     if (g_ram[0x00E1] != 0) return 0; /* MenuState: preserve sliding inventory */
     return 1;
