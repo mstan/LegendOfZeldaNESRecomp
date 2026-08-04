@@ -1,0 +1,86 @@
+format_version = 1
+id = "legend-of-zelda.enhancement.voxel-first-person"
+version = "1.0.0"
+name = "Voxel 3D (first person)"
+author = "NESRecomp"
+description = "Places the camera at Link's live position with right-stick free look and camera-relative movement without changing the stock ROM or save data."
+license = "MIT"
+resolver = "declarative"
+save_compatibility = "stock"
+
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "3fe272fb"
+
+[[feature]]
+id = "voxel-first-person"
+name = "Voxel 3D (first person)"
+camera_controls = true
+description = "Tracks Link through the reconstructed room with right-stick look and camera-relative left-stick movement while retaining enemies, items, terrain, shadows, and the original HUD."
+group = "Display"
+default_enabled = false
+exclusive_group = "display-mode"
+
+[[plugin]]
+feature = "voxel-first-person"
+id = "legend-of-zelda.voxel-first-person"
+
+[[option]]
+feature = "voxel-first-person"
+id = "pitch"
+label = "Look pitch"
+description = "Vertical first-person look angle in degrees."
+group = "Camera"
+type = "integer"
+default = 0
+min = -30
+max = 30
+step = 5
+
+[[option]]
+feature = "voxel-first-person"
+id = "yaw"
+label = "Look yaw"
+description = "Horizontal look offset from Link's facing direction in degrees."
+group = "Camera"
+type = "integer"
+default = 0
+min = -180
+max = 180
+step = 5
+
+[[option]]
+feature = "voxel-first-person"
+id = "roll"
+label = "Camera roll"
+description = "Rotation around the view axis in degrees."
+group = "Camera"
+type = "integer"
+default = 0
+min = -45
+max = 45
+step = 5
+
+[[option]]
+feature = "voxel-first-person"
+id = "zoom"
+label = "Field of view"
+description = "First-person focal scale percentage."
+group = "Camera"
+type = "integer"
+default = 100
+min = 50
+max = 175
+step = 5
+
+[[option]]
+feature = "voxel-first-person"
+id = "sprite-scale"
+label = "Sprite scale"
+description = "World scale of enemy, item, and effect billboards."
+group = "Sprites"
+type = "integer"
+default = 115
+min = 75
+max = 200
+step = 5

@@ -7,11 +7,16 @@
  */
 #include "zelda_voxel.h"
 
+#include "config.h"
+#include "controller.h"
+#include "keybinds.h"
 #include "nes_runtime.h"
 #include "voxel_renderer.h"
 
 #include <SDL.h>
+#include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #define ZELDA_PLAYFIELD_X       0
@@ -31,6 +36,7 @@
 #define ZELDA_WIDE_MARGIN       85
 #define ZELDA_OUTPUT_WIDTH      (ZELDA_PLAYFIELD_WIDTH + ZELDA_WIDE_MARGIN * 2)
 #define ZELDA_OUTPUT_HEIGHT     240
+#define ZELDA_PI                3.14159265358979323846f
 
 /* CPU $6530 maps to g_sram[$0530].  Columns are contiguous 22-byte runs. */
 #define ZELDA_PLAY_AREA_TILES   (g_sram + 0x0530)
@@ -54,6 +60,20 @@ static int s_was_scrolling;
 static int s_exit_loading;
 static int s_mod_enabled;
 static int s_view_enabled;
+static int s_first_person;
+static float s_first_person_heading = -90.0f;
+static float s_first_person_look_pitch;
+static int s_first_person_heading_initialized;
+static float s_left_stick_x;
+static float s_left_stick_y;
+static float s_right_stick_x;
+static float s_right_stick_y;
+static float s_diorama_yaw_remainder;
+static float s_diorama_pitch_remainder;
+static int s_first_person_last_mapped_direction;
+static uint8_t s_first_person_raw_buttons;
+static uint64_t s_first_person_raw_buttons_frame = UINT64_MAX;
+static int s_first_person_input_overridden;
 static int s_pitch = 35;
 static int s_yaw = -20;
 static int s_roll;
@@ -78,7 +98,10 @@ static int dungeon_exit_scroll_pending(void);
 static int current_tiles_are_overworld(void);
 static void configure_scene_backdrop(NesVoxelScene *scene);
 static void update_render_controls(void);
+static void update_first_person_controls(void);
+static void restore_first_person_input(void);
 static int clamp_int(int value, int low, int high);
+static float clamp_float(float value, float low, float high);
 
 static int tile_index(int x, int y) {
     return x * ZELDA_TILE_ROWS + y;
@@ -217,6 +240,21 @@ static int zelda_sprite_overlay(int min_x, int min_y,
     return 0;
 }
 
+static int zelda_first_person_sprite_visible(int min_x, int min_y,
+                                              int max_x, int max_y,
+                                              void *user) {
+    int player_x = g_ram[0x0070]; /* ObjX[0] */
+    int player_y = g_ram[0x0084]; /* ObjY[0] */
+    (void)user;
+    /* The camera occupies Link's body. Suppress only the connected metasprite
+     * around his live object coordinates; enemies, weapons, pickups, and
+     * effects remain reconstructed as cards. */
+    if (max_x >= player_x - 4 && min_x <= player_x + 20 &&
+        max_y >= player_y - 4 && min_y <= player_y + 24)
+        return 0;
+    return 1;
+}
+
 static float zelda_sprite_ground(int min_x, int min_y,
                                  int max_x, int max_y,
                                  float sampled_ground, void *user) {
@@ -230,6 +268,34 @@ static float zelda_sprite_ground(int min_x, int min_y,
      * top-down source image, but Link, enemies, pickups, and effects all remain
      * on the playfield floor rather than teleporting onto an extruded roof. */
     return 0.0f;
+}
+
+static int zelda_sprite_connect(int first_index, int second_index,
+                                void *user) {
+    int first = first_index * 4;
+    int second = second_index * 4;
+    uint8_t first_tile = g_ppu_oam[first + 1];
+    uint8_t second_tile = g_ppu_oam[second + 1];
+    uint8_t first_attr = g_ppu_oam[first + 2];
+    uint8_t second_attr = g_ppu_oam[second + 2];
+    int first_x = g_ppu_oam[first + 3];
+    int second_x = g_ppu_oam[second + 3];
+    int first_y = g_ppu_oam[first] + 1;
+    int second_y = g_ppu_oam[second] + 1;
+    (void)user;
+
+    /* Tektites store their left and right 8-pixel halves in two distant OAM
+     * bands rather than consecutively. They share a CA/CC animation tile,
+     * palette and row, sit exactly eight pixels apart, and mirror horizontally.
+     * Join only that signature so nearby independent enemies remain separate. */
+    if (first_tile != second_tile ||
+        (first_tile != 0xCA && first_tile != 0xCC))
+        return 0;
+    if (first_y != second_y || abs(first_x - second_x) != 8)
+        return 0;
+    if ((first_attr & 0x83) != (second_attr & 0x83))
+        return 0;
+    return ((first_attr ^ second_attr) & 0x40) != 0;
 }
 
 static int zelda_tree_billboard(uint8_t tile, int x, int y,
@@ -444,6 +510,8 @@ static int prepare_transition_scene(NesVoxelScene *scene) {
 }
 
 void zelda_voxel_set_mod_enabled(int enabled) {
+    if (!enabled)
+        restore_first_person_input();
     s_mod_enabled = enabled != 0;
     s_view_enabled = s_mod_enabled;
     if (!s_mod_enabled) {
@@ -454,8 +522,18 @@ void zelda_voxel_set_mod_enabled(int enabled) {
     }
 }
 
-void zelda_voxel_configure_mod(int pitch, int yaw, int roll,
+void zelda_voxel_configure_mod(int first_person,
+                               int pitch, int yaw, int roll,
                                int zoom_percent, int sprite_scale_percent) {
+    restore_first_person_input();
+    s_first_person = first_person != 0;
+    s_first_person_heading_initialized = 0;
+    s_first_person_look_pitch = 0.0f;
+    s_left_stick_x = s_left_stick_y = 0.0f;
+    s_right_stick_x = s_right_stick_y = 0.0f;
+    s_diorama_yaw_remainder = s_diorama_pitch_remainder = 0.0f;
+    s_first_person_last_mapped_direction = 0;
+    s_first_person_raw_buttons_frame = UINT64_MAX;
     s_pitch = s_default_pitch = pitch;
     s_yaw = s_default_yaw = yaw;
     s_roll = s_default_roll = roll;
@@ -473,8 +551,9 @@ void zelda_voxel_init(void) {
         g_render_width = ZELDA_OUTPUT_WIDTH;
         g_widescreen_left = ZELDA_WIDE_MARGIN;
         g_widescreen_right = ZELDA_WIDE_MARGIN;
-        printf("[Voxel] Zelda diorama enabled: pitch=%d yaw=%d roll=%d "
+        printf("[Voxel] Zelda %s enabled: pitch=%d yaw=%d roll=%d "
                "zoom=%d%% sprites=%d%% (numpad adjusts)\n",
+               s_first_person ? "first-person" : "overworld diorama",
                s_pitch, s_yaw, s_roll, s_zoom, s_sprite_scale);
     }
 }
@@ -487,41 +566,81 @@ static int clamp_int(int value, int low, int high) {
 
 void zelda_voxel_handle_event(const SDL_Event *event) {
     int changed = 0;
+    int action;
     SDL_Scancode key;
-    if (!s_mod_enabled || !event || event->type != SDL_KEYDOWN)
+    if (!s_mod_enabled || !event)
+        return;
+    if (event->type == SDL_CONTROLLERAXISMOTION &&
+        g_nes_config.player_src[0] == 2 &&
+        controller_instance_is_player(event->caxis.which, 1)) {
+        float value = event->caxis.value < 0
+            ? (float)event->caxis.value / 32768.0f
+            : (float)event->caxis.value / 32767.0f;
+        switch (event->caxis.axis) {
+            case SDL_CONTROLLER_AXIS_LEFTX:
+                if (s_first_person) s_left_stick_x = value;
+                break;
+            case SDL_CONTROLLER_AXIS_LEFTY:
+                if (s_first_person) s_left_stick_y = value;
+                break;
+            case SDL_CONTROLLER_AXIS_RIGHTX: s_right_stick_x = value; break;
+            case SDL_CONTROLLER_AXIS_RIGHTY: s_right_stick_y = value; break;
+            default: break;
+        }
+        return;
+    }
+    if (event->type == SDL_CONTROLLERDEVICEREMOVED) {
+        s_left_stick_x = s_left_stick_y = 0.0f;
+        s_right_stick_x = s_right_stick_y = 0.0f;
+        return;
+    }
+    if (event->type != SDL_KEYDOWN)
         return;
     key = event->key.keysym.scancode;
+    action = keybinds_camera_action_for_scancode(key);
     /* Adjustment keys honor SDL repeat so holding a numpad direction sweeps
      * the target. Keep the toggle and reset edge-triggered. */
     if (event->key.repeat &&
-        (key == SDL_SCANCODE_KP_0 || key == SDL_SCANCODE_KP_5))
+        (action == NES_CAMERA_TOGGLE || action == NES_CAMERA_RESET))
         return;
-    switch (key) {
-        case SDL_SCANCODE_KP_0:
-            s_view_enabled = !s_view_enabled; changed = 1; break;
-        case SDL_SCANCODE_KP_8:
-            s_pitch = clamp_int(s_pitch + 5, 5, 85); changed = 1; break;
-        case SDL_SCANCODE_KP_2:
-            s_pitch = clamp_int(s_pitch - 5, 5, 85); changed = 1; break;
-        case SDL_SCANCODE_KP_4:
+    switch (action) {
+        case NES_CAMERA_TOGGLE:
+            s_view_enabled = !s_view_enabled;
+            if (!s_view_enabled)
+                restore_first_person_input();
+            changed = 1;
+            break;
+        case NES_CAMERA_LOOK_UP:
+            s_pitch = clamp_int(s_pitch + 5,
+                                s_first_person ? -30 : 5,
+                                s_first_person ? 30 : 85);
+            changed = 1;
+            break;
+        case NES_CAMERA_LOOK_DOWN:
+            s_pitch = clamp_int(s_pitch - 5,
+                                s_first_person ? -30 : 5,
+                                s_first_person ? 30 : 85);
+            changed = 1;
+            break;
+        case NES_CAMERA_LOOK_LEFT:
             s_yaw = clamp_int(s_yaw - 5, -180, 180); changed = 1; break;
-        case SDL_SCANCODE_KP_6:
+        case NES_CAMERA_LOOK_RIGHT:
             s_yaw = clamp_int(s_yaw + 5, -180, 180); changed = 1; break;
-        case SDL_SCANCODE_KP_7:
+        case NES_CAMERA_ROLL_LEFT:
             s_roll = clamp_int(s_roll - 5, -45, 45); changed = 1; break;
-        case SDL_SCANCODE_KP_9:
+        case NES_CAMERA_ROLL_RIGHT:
             s_roll = clamp_int(s_roll + 5, -45, 45); changed = 1; break;
-        case SDL_SCANCODE_KP_PLUS:
+        case NES_CAMERA_ZOOM_IN:
             s_zoom = clamp_int(s_zoom + 5, 50, 200); changed = 1; break;
-        case SDL_SCANCODE_KP_MINUS:
+        case NES_CAMERA_ZOOM_OUT:
             s_zoom = clamp_int(s_zoom - 5, 50, 200); changed = 1; break;
-        case SDL_SCANCODE_KP_1:
+        case NES_CAMERA_SPRITE_SMALLER:
             s_sprite_scale =
                 clamp_int(s_sprite_scale - 10, 75, 250); changed = 1; break;
-        case SDL_SCANCODE_KP_3:
+        case NES_CAMERA_SPRITE_LARGER:
             s_sprite_scale =
                 clamp_int(s_sprite_scale + 10, 75, 250); changed = 1; break;
-        case SDL_SCANCODE_KP_5:
+        case NES_CAMERA_RESET:
             s_pitch = s_default_pitch;
             s_yaw = s_default_yaw;
             s_roll = s_default_roll;
@@ -546,7 +665,181 @@ static float ease_control(float current, float target) {
     return current + delta * 0.25f;
 }
 
+static float first_person_heading_for_direction(int direction) {
+    switch (direction) {
+        case 1: return 0.0f;    /* right: +X */
+        case 2: return 180.0f;  /* left:  -X */
+        case 4: return 90.0f;   /* down:  +Z */
+        default: return -90.0f; /* up:    -Z */
+    }
+}
+
+static float wrap_heading(float heading) {
+    while (heading > 180.0f) heading -= 360.0f;
+    while (heading < -180.0f) heading += 360.0f;
+    return heading;
+}
+
+static void initialize_first_person_heading(void) {
+    if (!s_first_person_heading_initialized) {
+        int object_direction = g_ram[0x0098] & 0x0F;
+        if (object_direction != 1 && object_direction != 2 &&
+            object_direction != 4 && object_direction != 8)
+            object_direction = 8;
+        s_first_person_heading =
+            first_person_heading_for_direction(object_direction);
+        s_first_person_heading_initialized = 1;
+    }
+}
+
+static float stick_curve(float value, float deadzone) {
+    float magnitude = fabsf(value);
+    float scaled;
+    if (magnitude <= deadzone) return 0.0f;
+    scaled = (magnitude - deadzone) / (1.0f - deadzone);
+    scaled *= scaled;
+    return value < 0.0f ? -scaled : scaled;
+}
+
+static int first_person_controls_active(void) {
+    return s_mod_enabled && s_view_enabled && s_first_person &&
+           gameplay_scene_visible();
+}
+
+static void restore_first_person_input(void) {
+    if (s_first_person_input_overridden)
+        g_controller1_buttons = s_first_person_raw_buttons;
+    s_first_person_input_overridden = 0;
+    s_first_person_last_mapped_direction = 0;
+}
+
+static void update_first_person_look(void) {
+    float yaw_input;
+    float pitch_input;
+    if (!first_person_controls_active()) return;
+    initialize_first_person_heading();
+
+    /* Match the modern free-look model used by Gen1Recomp's voxel mod:
+     * the right stick owns attitude and never doubles as movement. A squared
+     * response curve preserves fine aim near center without making a full
+     * deflection feel sluggish. Values are degrees per 60 Hz frame. */
+    yaw_input = stick_curve(s_right_stick_x, 0.18f);
+    pitch_input = stick_curve(s_right_stick_y, 0.18f);
+    s_first_person_heading = wrap_heading(
+        s_first_person_heading + yaw_input * 3.5f);
+    s_first_person_look_pitch = clamp_float(
+        s_first_person_look_pitch - pitch_input * 2.4f, -50.0f, 50.0f);
+}
+
+static int quantize_camera_relative_direction(float world_x, float world_z) {
+    float ax = fabsf(world_x);
+    float az = fabsf(world_z);
+
+    /* A small hysteresis band stops a held diagonal from rattling between
+     * axes as the right stick crosses a 45-degree camera boundary. */
+    if (fabsf(ax - az) < 0.10f &&
+        s_first_person_last_mapped_direction != 0) {
+        int last = s_first_person_last_mapped_direction;
+        if (last == 1 || last == 2)
+            return world_x >= 0.0f ? 1 : 2;
+        return world_z >= 0.0f ? 4 : 8;
+    }
+    if (ax >= az)
+        return world_x >= 0.0f ? 1 : 2;
+    return world_z >= 0.0f ? 4 : 8;
+}
+
+static void remap_first_person_movement(void) {
+    uint8_t raw_directions;
+    uint8_t other_buttons;
+    float strafe = 0.0f;
+    float forward = 0.0f;
+    float stick_magnitude =
+        sqrtf(s_left_stick_x * s_left_stick_x +
+              s_left_stick_y * s_left_stick_y);
+    float heading;
+    float world_x;
+    float world_z;
+    int mapped = 0;
+
+    if (!first_person_controls_active()) {
+        restore_first_person_input();
+        return;
+    }
+    initialize_first_person_heading();
+    /* game_on_frame may run more than once while resolving a nested VBlank.
+     * Capture the runner's original byte once per presented frame so a second
+     * pass never treats our already-remapped direction as fresh input. */
+    if (s_first_person_raw_buttons_frame != g_frame_count) {
+        s_first_person_raw_buttons = g_controller1_buttons;
+        s_first_person_raw_buttons_frame = g_frame_count;
+    }
+    raw_directions = s_first_person_raw_buttons & 0x0F;
+    other_buttons = s_first_person_raw_buttons & 0xF0;
+
+    /* Prefer the left stick's true vector over the runner's already-quantized
+     * d-pad bits. D-pad and keyboard remain useful camera-relative fallbacks. */
+    if (stick_magnitude > 0.25f) {
+        float strength =
+            (stick_magnitude - 0.25f) / (1.0f - 0.25f);
+        if (strength > 1.0f) strength = 1.0f;
+        strafe = s_left_stick_x / stick_magnitude * strength;
+        forward = -s_left_stick_y / stick_magnitude * strength;
+    } else {
+        strafe = ((raw_directions & 0x01) ? 1.0f : 0.0f) -
+                 ((raw_directions & 0x02) ? 1.0f : 0.0f);
+        forward = ((raw_directions & 0x08) ? 1.0f : 0.0f) -
+                  ((raw_directions & 0x04) ? 1.0f : 0.0f);
+    }
+
+    if (fabsf(strafe) > 0.01f || fabsf(forward) > 0.01f) {
+        /* Heading 0 faces world-right; +90 faces world-down. Forward follows
+         * the view, and strafe-right is its clockwise ground-plane tangent. */
+        heading =
+            (s_first_person_heading + s_render_yaw) * ZELDA_PI / 180.0f;
+        world_x = cosf(heading) * forward - sinf(heading) * strafe;
+        world_z = sinf(heading) * forward + cosf(heading) * strafe;
+        mapped = quantize_camera_relative_direction(world_x, world_z);
+    }
+
+    g_controller1_buttons = other_buttons | (uint8_t)mapped;
+    s_first_person_input_overridden = 1;
+    if (mapped != s_first_person_last_mapped_direction) {
+        if (mapped != 0) {
+            printf("[Voxel] Zelda first-person move heading=%.0f -> dir=%d\n",
+                   wrap_heading(s_first_person_heading + s_render_yaw),
+                   mapped);
+        }
+        s_first_person_last_mapped_direction = mapped;
+    }
+}
+
+static void update_first_person_controls(void) {
+    if (!s_first_person) return;
+    update_first_person_look();
+    remap_first_person_movement();
+}
+
 static void update_render_controls(void) {
+    int whole;
+    if (!s_first_person && s_mod_enabled && s_view_enabled) {
+        s_diorama_yaw_remainder +=
+            stick_curve(s_right_stick_x, 0.18f) * 2.5f;
+        whole = (int)s_diorama_yaw_remainder;
+        if (whole != 0) {
+            s_yaw += whole;
+            while (s_yaw > 180) s_yaw -= 360;
+            while (s_yaw < -180) s_yaw += 360;
+            s_diorama_yaw_remainder -= (float)whole;
+        }
+        s_diorama_pitch_remainder -=
+            stick_curve(s_right_stick_y, 0.18f) * 2.0f;
+        whole = (int)s_diorama_pitch_remainder;
+        if (whole != 0) {
+            s_pitch = clamp_int(s_pitch + whole, 5, 85);
+            s_diorama_pitch_remainder -= (float)whole;
+        }
+    }
     s_render_pitch = ease_control(s_render_pitch, (float)s_pitch);
     s_render_yaw = ease_control(s_render_yaw, (float)s_yaw);
     s_render_roll = ease_control(s_render_roll, (float)s_roll);
@@ -558,6 +851,7 @@ static void update_render_controls(void) {
 void zelda_voxel_update_hotkey(void) {
     if (!s_mod_enabled) return;
     update_render_controls();
+    update_first_person_controls();
     /* Keep menus and title screens centered instead of exposing wrapped
      * nametable content in the fixed 16:9 framebuffer. */
     {
@@ -647,6 +941,47 @@ static void fade_unfurl_from_black(uint32_t *framebuffer) {
                 0xFF000000u | (r << 16) | (g << 8) | b;
         }
     }
+}
+
+static float clamp_float(float value, float low, float high) {
+    if (value < low) return low;
+    if (value > high) return high;
+    return value;
+}
+
+static void configure_first_person_camera(NesVoxelScene *scene) {
+    float heading;
+    float look_pitch =
+        (s_render_pitch + s_first_person_look_pitch) *
+        ZELDA_PI / 180.0f;
+    float look_distance = 128.0f;
+    float eye_x;
+    float eye_z;
+
+    heading =
+        (s_first_person_heading + s_render_yaw) * ZELDA_PI / 180.0f;
+
+    eye_x = clamp_float((float)g_ram[0x0070] + 8.0f,
+                        4.0f, ZELDA_PLAYFIELD_WIDTH - 4.0f);
+    eye_z = clamp_float((float)g_ram[0x0084] -
+                            ZELDA_PLAYFIELD_Y + 10.0f,
+                        4.0f, ZELDA_PLAYFIELD_HEIGHT - 4.0f);
+    eye_x += scene->sprite_world_offset_x + cosf(heading) * 2.0f;
+    eye_z += scene->sprite_world_offset_z + sinf(heading) * 2.0f;
+
+    scene->use_camera_pose = 1;
+    scene->camera_eye_x = eye_x;
+    scene->camera_eye_y = 8.0f;
+    scene->camera_eye_z = eye_z;
+    scene->camera_look_at_x =
+        eye_x + cosf(heading) * cosf(look_pitch) * look_distance;
+    scene->camera_look_at_y =
+        scene->camera_eye_y + sinf(look_pitch) * look_distance;
+    scene->camera_look_at_z =
+        eye_z + sinf(heading) * cosf(look_pitch) * look_distance;
+    scene->camera_focal_scale =
+        clamp_float(0.78f * s_render_zoom / 100.0f, 0.42f, 1.35f);
+    scene->camera_center_y = 0.61f;
 }
 
 void zelda_voxel_post_render(uint32_t *framebuffer) {
@@ -747,16 +1082,19 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
     scene.user = &scene;
     if (current_tiles_are_overworld()) {
         scene.tile_billboard = zelda_tree_billboard;
-        scene.tile_billboard_scale = 1.35f;
+        scene.tile_billboard_scale = s_first_person ? 1.0f : 1.35f;
         scene.tile_billboard_shadow_scale = 0.72f;
         scene.tile_billboard_shadow_opacity = 0.30f;
     }
-    scene.sprite_face_camera_pitch = 1;
-    scene.sprite_constant_screen_size = 1;
+    scene.sprite_face_camera_pitch = !s_first_person;
+    scene.sprite_constant_screen_size = !s_first_person;
     scene.clip_sprites_to_source = 1;
-    scene.sprite_depth_bias = 1.0f;
+    scene.sprite_depth_bias = s_first_person ? 0.2f : 1.0f;
     scene.sprite_ground = zelda_sprite_ground;
+    scene.sprite_connect = zelda_sprite_connect;
     scene.sprite_max_height = zelda_sprite_max_height;
+    scene.sprite_visible =
+        s_first_person ? zelda_first_person_sprite_visible : NULL;
     scene.sprite_shadow = zelda_sprite_shadow;
     scene.sprite_shadow_scale = 0.62f;
     scene.sprite_shadow_opacity = 0.34f;
@@ -766,6 +1104,8 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
     scene.extend_preserved_rows = 1;
     scene.preserved_rows_fill = 0xFF000000u;
     configure_scene_backdrop(&scene);
+    if (s_first_person)
+        configure_first_person_camera(&scene);
     if (nes_voxel_render(&scene)) {
         if (world_unfurl_active())
             fade_unfurl_from_black(framebuffer);

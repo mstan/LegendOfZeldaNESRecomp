@@ -50,11 +50,13 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
 | F7     | Load state |
 | Numpad 0 | Toggle Voxel 3D |
 | Numpad 8 / 2 | Increase / decrease camera pitch |
-| Numpad 4 / 6 | Orbit camera left / right (yaw) |
+| Numpad 4 / 6 | Adjust camera yaw left / right |
 | Numpad 7 / 9 | Roll camera left / right |
 | Numpad + / - | Zoom in / out |
 | Numpad 1 / 3 | Shrink / enlarge assembled sprites |
 | Numpad 5 | Reset the live camera rig to package defaults |
+| Right stick (first person) | Look horizontally and vertically |
+| Left stick / D-pad / arrow keys (first person) | Move relative to the camera |
 
 ## Voxel 3D (experimental)
 
@@ -62,19 +64,34 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
   <img src="docs/assets/voxel-3d.webp" alt="The Legend of Zelda rendered as a Voxel 3D diorama" width="960">
 </p>
 
-Open **Mods** in the launcher and enable **Voxel 3D**. The bundled
-feature is disabled by default and targets the verified stock PRG0 ROM. Camera
+Open **Mods** in the launcher and enable either **Voxel 3D (overworld)** or
+**Voxel 3D (first person)**. The two presentation modes are mutually exclusive:
+enabling one automatically disables the other. Both bundled features are
+disabled by default and target the verified stock PRG0 ROM. Camera
 pitch, yaw, roll, zoom, and sprite scale can be saved as package options. The
 numpad controls above provide temporary live experimentation; they do not
 rewrite `mods/state.toml`. Title, registration, and inventory screens remain
 flat and pillarboxed.
 
-The default camera presents each room as a raised tabletop. Pitch changes how
+The overworld camera presents each room as a raised tabletop. Pitch changes how
 far the camera looks down into the room; yaw orbits around the vertical axis;
 roll tilts the horizon; zoom changes framing without changing the room; and
 sprite scale adjusts assembled Link, enemy, item, and effect cards. Extreme
 angles are intentionally available for experimentation, while Numpad 5 returns
 the live camera to the package defaults.
+
+The first-person camera follows Link's live position and uses a two-stick
+control model: the right stick owns continuous yaw and pitch, while the left
+stick moves relative to the direction being viewed. D-pad and arrow-key input
+use the same camera-relative mapping. Zelda's original movement remains
+four-directional, so diagonal or off-axis intent is quantized to the nearest
+native cardinal direction with a small hysteresis band to prevent jitter.
+Temporary numpad yaw participates in that same mapping, so pressing forward
+continues through the adjusted view instead of snapping the camera elsewhere.
+Link's own card is hidden because the camera occupies it, while
+enemies, weapons, pickups, effects, terrain, shadows, and the original HUD
+remain visible. In this mode pitch looks up or down, yaw offsets the view from
+the current heading, and zoom adjusts the field of view.
 
 Geometry comes from Zelda's live 32x22 `PlayAreaTiles` grid and its collision
 classification. The original frame supplies tile textures, while current OAM

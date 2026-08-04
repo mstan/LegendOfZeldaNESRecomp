@@ -1,0 +1,5 @@
+TURBO ON
+LOAD_STATE build-voxel-vs/Release/savestates/slot02.sav
+WAIT 12
+SCREENSHOT zelda_tektite_grouping.png
+EXIT 0

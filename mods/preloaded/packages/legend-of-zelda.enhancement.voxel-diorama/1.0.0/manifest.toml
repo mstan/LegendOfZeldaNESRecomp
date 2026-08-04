@@ -1,7 +1,7 @@
 format_version = 1
 id = "legend-of-zelda.enhancement.voxel-diorama"
 version = "1.0.0"
-name = "Voxel 3D"
+name = "Voxel 3D (overworld)"
 author = "NESRecomp"
 description = "Renders Zelda's live playfield as a depth-buffered 3D diorama without changing the stock ROM or save data."
 license = "MIT"
@@ -14,10 +14,12 @@ rom_crc32 = "3fe272fb"
 
 [[feature]]
 id = "voxel-diorama"
-name = "Voxel 3D"
+name = "Voxel 3D (overworld)"
+camera_controls = true
 description = "Extrudes live map tiles, presents OAM sprites as upright cards, and extends the black HUD bar across the widescreen frame."
 group = "Display"
 default_enabled = false
+exclusive_group = "display-mode"
 
 [[plugin]]
 feature = "voxel-diorama"
