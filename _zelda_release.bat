@@ -25,15 +25,13 @@ set "PATH=C:\Program Files\Microsoft Visual Studio\2022\Community\Common7\IDE\Co
 cd /d %~dp0
 
 echo === [1/5] Build recompiler ===
-cd nesrecomp
-if not exist build_recomp\CMakeCache.txt (
-    cmake -S recompiler -B build_recomp -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl
-    if errorlevel 1 exit /b 1
-)
-cmake --build build_recomp
+REM Dedicated, always-configured dir: a developer's nesrecomp\build_recomp may
+REM use another generator (VS puts the exe under Debug\) and must not be reused.
+cmake -S nesrecomp\recompiler -B build\recompiler -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl
 if errorlevel 1 exit /b 1
-cd ..
-set "RECOMP=nesrecomp\build_recomp\NESRecomp.exe"
+cmake --build build\recompiler
+if errorlevel 1 exit /b 1
+set "RECOMP=build\recompiler\NESRecomp.exe"
 
 echo === [2/5] Derive patched HD ROM ===
 if not exist build mkdir build
@@ -56,10 +54,9 @@ echo === [4/5] Regen HD (generated\zelda_hd_*) ===
 if errorlevel 1 exit /b 4
 
 echo === [5/5] Configure + build both targets ===
-if not exist build_release\CMakeCache.txt (
-    cmake -S . -B build_release -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
-    if errorlevel 1 exit /b 5
-)
+REM Production observability defaults, forced so a stale cache cannot ship a traced build.
+cmake -S . -B build_release -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl -DNESRECOMP_ENABLE_TRACE=OFF -DNESRECOMP_ENABLE_STACK_TRACKING=OFF -DNESRECOMP_ENABLE_POSTMORTEM_RINGS=OFF
+if errorlevel 1 exit /b 5
 cmake --build build_release
 if errorlevel 1 exit /b 6
 

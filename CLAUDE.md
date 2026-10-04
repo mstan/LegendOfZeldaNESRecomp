@@ -17,8 +17,14 @@ code into each exe:
 
 **To build both: run `_zelda_release.bat`.** It builds the recompiler, derives the
 patched ROM (`tools/apply_hd_patch.py` + `hdpatch/ZeldaHD.ips`), regens *both* ROMs
-(renaming the recompiler's `generated/zelda_*` output to `zelda_stock_*` /
-`zelda_hd_*`), then configures and builds both CMake targets into `build_release/`.
+(`--output-prefix zelda_stock` / `zelda_hd`), then configures (production
+observability OFF) and builds both CMake targets into `build_release/`.
+
+**To package and verify:** `powershell -File tools\make_release.ps1` (runs the bat,
+then stages an allowlisted zip with `assets/` + the pristine `mods/preloaded` catalog),
+then `python tools/voxel_smoke.py --rom "Zelda # NES.NES"` — headless stock + both
+Voxel 3D modes in isolated dirs (fresh saves, own screenshot dir); nonzero exit on any
+script desync, dispatch miss, or camera/movement script whose frames never change.
 You must supply a legitimate stock PRG0 ROM (SHA-1
 `dab79c84934f9aa5db4e7dad390e5d0c12443fa2`); no ROM is committed.
 

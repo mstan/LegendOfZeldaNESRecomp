@@ -41,13 +41,14 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
 | A          | Z |
 | B          | X |
 | Start      | Enter |
-| Select     | Tab |
+| Select     | Backslash |
 
 | Hotkey | Action |
 |--------|--------|
-| F5     | Toggle turbo (fast-forward) |
-| F6     | Save state |
-| F7     | Load state |
+| Hold Tab | Turbo (fast-forward) |
+| F1–F12 | Load the corresponding save slot |
+| Shift+F1–F12 | Save to the corresponding slot |
+| Alt+Enter | Toggle fullscreen |
 | Numpad 0 | Toggle Voxel 3D |
 | Numpad 8 / 2 | Increase / decrease camera pitch |
 | Numpad 4 / 6 | Adjust camera yaw left / right |
@@ -64,8 +65,8 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
   <img src="docs/assets/voxel-3d.webp" alt="The Legend of Zelda rendered as a Voxel 3D diorama" width="960">
 </p>
 
-Open **Mods** in the launcher and enable either **Voxel 3D (overworld)** or
-**Voxel 3D (first person)**. The two presentation modes are mutually exclusive:
+Open **Mods** in the launcher and enable either **Voxel 3D Overworld (Experimental)** or
+**Voxel 3D First Person (Experimental)**. The two presentation modes are mutually exclusive:
 enabling one automatically disables the other. Both bundled features are
 disabled by default and target the verified stock PRG0 ROM. Camera
 pitch, yaw, roll, zoom, and sprite scale can be saved as package options. The
