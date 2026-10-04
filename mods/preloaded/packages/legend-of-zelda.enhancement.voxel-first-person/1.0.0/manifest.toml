@@ -1,7 +1,7 @@
 format_version = 1
 id = "legend-of-zelda.enhancement.voxel-first-person"
 version = "1.0.0"
-name = "Voxel 3D (first person)"
+name = "Voxel 3D First Person (Experimental)"
 author = "NESRecomp"
 description = "Places the camera at Link's live position with right-stick free look and camera-relative movement without changing the stock ROM or save data."
 license = "MIT"
@@ -14,9 +14,9 @@ rom_crc32 = "3fe272fb"
 
 [[feature]]
 id = "voxel-first-person"
-name = "Voxel 3D (first person)"
+name = "Voxel 3D First Person (Experimental)"
 camera_controls = true
-description = "Tracks Link through the reconstructed room with right-stick look and camera-relative left-stick movement while retaining enemies, items, terrain, shadows, and the original HUD."
+description = "Tracks Link through the reconstructed room with right-stick look and camera-relative left-stick movement while retaining enemies, items, terrain, shadows, and the original HUD. Experimental."
 group = "Display"
 default_enabled = false
 exclusive_group = "display-mode"

@@ -1,0 +1,15 @@
+# Derive a Red Tektite room (overworld $76, west of the start) from the
+# standard voxel state. Writes tests/voxel_tektite_test.nss.
+TURBO ON
+WAIT 2
+LOAD_STATE tests/voxel_camera_test.nss
+WAIT 10
+HOLD LEFT
+WAIT 150
+RELEASE LEFT
+WAIT 90
+ASSERT_RAM8 00EB 76 room west of start
+ASSERT_RAM8 0350 0E red tektite in slot 1
+ASSERT_RAM8 00E0 00 not paused
+SAVE_STATE tests/voxel_tektite_test.nss
+EXIT 0

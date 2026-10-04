@@ -45,6 +45,10 @@ WAIT 8
 RELEASE START
 WAIT_RAM8 00E1 00
 WAIT 180
+# Every derived script loads this state: it must be live, unpaused gameplay.
+ASSERT_RAM8 0012 05 gameplay mode
+ASSERT_RAM8 00E0 00 not paused
+ASSERT_RAM8 00E1 00 no submenu
 SAVE_STATE tests/voxel_camera_test.nss
 SCREENSHOT zelda_voxel.png
 WAIT 2
