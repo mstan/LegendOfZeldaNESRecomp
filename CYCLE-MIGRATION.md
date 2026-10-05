@@ -70,5 +70,6 @@ python tools/cycle_probe.py --stock-exe build-cycle/Release/LegendOfZeldaNESReco
 The owner briefly played stock, diorama, first-person and the earlier separate
 Remastered build on 2026-10-04 and reported “all four pass.” The owner then
 requested shared modern HD Mods and adoption work for other games. The updated
-single-executable HD Mod requires another owner playtest before integration.
+single-executable HD Mod was also briefly played on 2026-10-04; the owner
+reported “Pass — plays correctly.” All required Zelda preview playtests pass.
 Source changes remain on feature branches; no merge or publication has occurred.
