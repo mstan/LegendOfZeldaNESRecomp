@@ -19,7 +19,7 @@
 # Prereqs (Homebrew): cmake, sdl2, dylibbundler, create-dmg (optional).
 #   brew install cmake sdl2 dylibbundler create-dmg
 set -euo pipefail
-# Cycle builds need --rom PATH; --hd-rom PATH selects the patched HD target.
+# Cycle builds need the stock USA ROM with --rom PATH; HD packs are Mods.
 
 # ============================ PER-GAME CONFIG ===============================
 APP_NAME="ZeldaNES"
@@ -34,7 +34,7 @@ DEBUG_CMAKE_FLAGS=( -DNESRECOMP_ENABLE_TRACE=ON )
 BUNDLE_ID="com.mstan.zeldanesrecomp"
 # ============================================================================
 
-ROM=""; HD_ROM=""
+ROM=""
 CONFIG="prod"; DO_REGEN=0; DO_DMG=1
 ARCH="$(uname -m)"   # arm64 on Apple Silicon, x86_64 on Intel
 REPO="$(cd "$(dirname "$0")/.." && pwd)"
@@ -43,7 +43,6 @@ OUT="$REPO/release-macos"
 while [ $# -gt 0 ]; do
   case "$1" in
     --rom) ROM="$2"; shift 2;;
-    --hd-rom) HD_ROM="$2"; shift 2;;
     --config) CONFIG="$2"; shift 2;;
     --prod) CONFIG="prod"; shift;;
     --debug) CONFIG="debug"; shift;;
@@ -57,14 +56,9 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$ROM" ] && [ -f "$ROM" ] || { echo "Supply the USA PRG0 ROM with --rom PATH." >&2; exit 2; }
 ROM="$(cd "$(dirname "$ROM")" && pwd)/$(basename "$ROM")"
-if [ -n "$HD_ROM" ]; then
-  [ -f "$HD_ROM" ] || { echo "Missing locally patched --hd-rom." >&2; exit 2; }
-  HD_ROM="$(cd "$(dirname "$HD_ROM")" && pwd)/$(basename "$HD_ROM")"
-  CMAKE_TARGET="LegendOfZeldaNESRecomp-HD"; APP_NAME="ZeldaNES-HD"
-fi
 case "$CONFIG" in prod) FLAGS=( "${PROD_CMAKE_FLAGS[@]}" );; debug) FLAGS=( "${DEBUG_CMAKE_FLAGS[@]}" );;
   *) echo "--config must be prod or debug" >&2; exit 2;; esac
-FLAGS+=( -DNESRECOMP_BACKEND=cycle "-DNESRECOMP_ROM=$ROM" "-DZELDA_HD_ROM=$HD_ROM" )
+FLAGS+=( -DNESRECOMP_BACKEND=cycle "-DNESRECOMP_ROM=$ROM" )
 [ "$(uname -s)" = "Darwin" ] || { echo "ERROR: run this on macOS." >&2; exit 1; }
 
 case "$ARCH" in
@@ -103,7 +97,10 @@ mkdir -p "$APPDIR/Contents/MacOS" "$APPDIR/Contents/Resources" "$APPDIR/Contents
 # folder as the .app and runs from there (so saves land beside the .app).
 cp "$BIN" "$APPDIR/Contents/MacOS/$CMAKE_TARGET"
 cp -R "$(dirname "$BIN")/assets" "$APPDIR/Contents/MacOS/assets"
-if [ -z "$HD_ROM" ]; then cp -R "$REPO/mods/preloaded" "$APPDIR/Contents/MacOS/mods"; fi
+cp -R "$REPO/mods/preloaded" "$APPDIR/Contents/MacOS/mods"
+mkdir -p "$APPDIR/Contents/MacOS/tools" "$APPDIR/Contents/MacOS/hdpatch"
+cp "$REPO/tools/import_hdpack.py" "$REPO/nesrecomp/tools/package_hdpack.py" "$APPDIR/Contents/MacOS/tools/"
+cp "$REPO/hdpatch/ZeldaRemasteredReadme.txt" "$APPDIR/Contents/MacOS/hdpatch/"
 cat > "$APPDIR/Contents/MacOS/$APP_NAME" <<EOF
 #!/bin/sh
 DIR="\$(cd "\$(dirname "\$0")" && pwd)"

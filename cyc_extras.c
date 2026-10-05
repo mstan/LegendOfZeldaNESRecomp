@@ -7,7 +7,8 @@
 #include "cycle_bridge.h"
 #include "zelda_voxel.h"
 #include "keybinds.h"
-#ifdef NESRECOMP_CYCLE_HDPACK
+#include "mod_runtime.h"
+#if defined(NESRECOMP_CYCLE_HDPACK) && !defined(NESRECOMP_CYCLE_HDPACK_MODS)
 #include "cyc_hdpack.h"
 #endif
 #include <string.h>
@@ -21,7 +22,7 @@ static void power_on(void *ctx) {
     snprintf(path,sizeof path,"%sLegendOfZeldaNESRecomp.exe",base?base:"");SDL_free(base);
     keybinds_init_readonly(path);
     zelda_voxel_init();
-#ifdef NESRECOMP_CYCLE_HDPACK
+#if defined(NESRECOMP_CYCLE_HDPACK) && !defined(NESRECOMP_CYCLE_HDPACK_MODS)
     cyc_hdpack_power_on();
 #endif
 }
@@ -48,7 +49,7 @@ static const uint32_t *present(void *ctx,int *width,int *height) {
     /* Rebuild after a load as well. The profile's stable-room cache is part
      * of its validated save record, so room transitions resume unchanged. */
     frame_end(ctx);
-#ifdef NESRECOMP_CYCLE_HDPACK
+#if defined(NESRECOMP_CYCLE_HDPACK) && !defined(NESRECOMP_CYCLE_HDPACK_MODS)
     return cyc_hdpack_present(picture,width,height);
 #endif
     *width=g_render_width;*height=240;
@@ -56,7 +57,12 @@ static const uint32_t *present(void *ctx,int *width,int *height) {
 }
 static bool option(void *ctx,const char *name,const char *value) {
     (void)ctx;(void)name;
-#ifdef NESRECOMP_CYCLE_HDPACK
+#ifdef NESRECOMP_CYCLE_HDPACK_MODS
+    if(nes_mod_hd_pack() && strcmp(value,"stock")) {
+        fprintf(stderr,"HD textures and voxel views require separate display selections\n");return false;
+    }
+#endif
+#if defined(NESRECOMP_CYCLE_HDPACK) && !defined(NESRECOMP_CYCLE_HDPACK_MODS)
     if(!strcmp(name,"--hdpack")){cyc_hdpack_config(strcmp(value,"off")!=0,!strcmp(value,"off")?"":value);return true;}
     if(strcmp(value,"stock"))return false;
 #endif
@@ -97,7 +103,7 @@ static void tcp_setup(void *ctx) {
 }
 static const CycHostOption options[]={
     {"--voxel",true,"stock, diorama or first-person"},
-#ifdef NESRECOMP_CYCLE_HDPACK
+#if defined(NESRECOMP_CYCLE_HDPACK) && !defined(NESRECOMP_CYCLE_HDPACK_MODS)
     {"--hdpack",true,"Remastered texture pack directory, or off"},
 #endif
 };

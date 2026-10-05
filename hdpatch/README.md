@@ -1,7 +1,11 @@
-# Zelda HD build (EXPERIMENTAL)
+# Zelda Remastered attribution and legacy patch helper
 
-This directory holds the IPS patch for building the **HD ("Zelda Remastered")**
-variant. HD texture-pack support in the recompiler is **experimental**.
+Cycle builds use the shared modern HD-pack Mods runtime in the stock executable.
+Run `python tools/import_hdpack.py --pack <folder> --rom <stock-rom> --out
+Zelda-Remastered.nesmod`, then install and enable it through **Mods**. The
+framework verifies the pack's IPS and applies it in memory; the original ROM
+stays untouched. This directory preserves the creator notice and the older
+IPS helper's input for explicit legacy builds and independent comparisons.
 
 ## What's here
 
@@ -20,19 +24,20 @@ variant. HD texture-pack support in the recompiler is **experimental**.
 - **The ROM** — supply your own legitimate North-American *The Legend of Zelda*
   PRG0 ROM (clean SHA-1 `DAB79C84934F9AA5DB4E7DAD390E5D0C12443FA2`). Never
   bundled.
-- **The HD texture pack** — download *Zelda: Remastered* yourself and drop its
-  contents (the `hires.txt` + PNGs) into the build's `hdpack/` folder (or point
-  the launcher's *HD Texture Pack* picker at it). Not bundled.
+- **The HD texture pack** — supply *Zelda: Remastered* yourself and import its
+  folder with `tools/import_hdpack.py`. Its art is not bundled in the game.
 
-## How the HD build works
+## Explicit legacy HD build
 
-The recompiler is a *static* recompiler: the ROM's code is translated to C at
-build time, so the patch is applied **at regen**, not at runtime:
+The older legacy executable compiles patched opcodes into C at build time.
+Its patch is applied to a derivative **at regen**. These directions apply
+only to `NESRECOMP_BACKEND=legacy`:
 
 ```
 python tools/apply_hd_patch.py --rom <your zelda.nes> --out build/zelda_hd.nes
 NESRecomp.exe build/zelda_hd.nes --game game.toml      # regen from the patched ROM
-cmake --build build_release
+cmake -S . -B build-legacy -DNESRECOMP_BACKEND=legacy
+cmake --build build-legacy --target LegendOfZeldaNESRecomp-HD
 ```
 
 The recompiled code is baked from the patched ROM and the runner reads PRG data

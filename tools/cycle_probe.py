@@ -1,6 +1,6 @@
 """Zelda cycle regression: real inputs, native/interpreter and fresh-process replay.
 
-Provide your verified stock ROM and optional local Remastered derivative/pack.
+Provide your verified stock ROM and optional installed, enabled Remastered Mods catalog.
 Evidence stays in --out; all runs disable battery saves and hide native windows.
 The optional HD pixel comparisons require Pillow.
 """
@@ -20,11 +20,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     for name in ('stock-exe', 'stock-rom', 'out'):
         ap.add_argument('--' + name, type=Path, required=True)
-    for name in ('hd-exe', 'hd-rom', 'hdpack', 'interp'):
+    for name in ('hd-mods', 'interp'):
         ap.add_argument('--' + name, type=Path)
     args = ap.parse_args()
-    if bool(args.hd_exe) != bool(args.hd_rom) or args.hdpack and not args.hd_exe:
-        ap.error('--hd-exe and --hd-rom must be provided together; --hdpack needs both')
     out = args.out.resolve(); out.mkdir(parents=True, exist_ok=True)
     route = out / 'route.txt'; route.write_text(ROUTE)
     startup = None
@@ -43,16 +41,10 @@ def main():
 
     cases = [(name, args.stock_exe, args.stock_rom, ['--voxel', name])
              for name in ('stock', 'diorama', 'first-person')]
-    if args.hd_exe:
-        cases.append(('hd-plain', args.hd_exe, args.hd_rom, ['--hdpack', 'off']))
-    if args.hdpack:
+    if args.hd_mods:
         from PIL import Image
-        fallback = out / 'fallback'; fallback.mkdir(exist_ok=True)
-        Image.new('RGBA', (16,16), (0,0,0,0)).save(fallback / 'unused.png')
-        (fallback / 'hires.txt').write_text('<ver>106\n<scale>2\n<img>unused.png\n'
-                                           '<tile>0,0123456789ABCDEF0123456789ABCDEF,0F010203,0,0,1,N\n')
-        cases += [('hd-textures', args.hd_exe, args.hd_rom, ['--hdpack', args.hdpack.resolve()]),
-                  ('hd-fallback', args.hd_exe, args.hd_rom, ['--hdpack', fallback])]
+        cases.append(('hd-textures', args.stock_exe, args.stock_rom,
+                      ['--mods-root', args.hd_mods.resolve()]))
     results = []
     for tag, exe, rom, options in cases:
         def artifacts(name):
@@ -70,12 +62,12 @@ def main():
         assert (out/(replay+'.hash')).read_text().splitlines() == (out/(tag+'-native.hash')).read_text().splitlines()[-300:]
         for suffix in ('.png', '-native.png', '-final.cycstate'):
             assert (out/(replay+suffix)).read_bytes() == (out/(tag+'-native'+suffix)).read_bytes(), (tag,'replay',suffix)
-        if tag.startswith('hd-') and tag != 'hd-plain':
+        if tag == 'hd-textures':
             actual = Image.open(out/(tag+'-native.png')).convert('RGBA')
             native = Image.open(out/(tag+'-native-native.png')).convert('RGBA')
             assert actual.size == (512,480)
             same = actual.tobytes() == native.resize(actual.size, Image.Resampling.NEAREST).tobytes()
-            assert same == (tag == 'hd-fallback'), (tag,'HD artwork/fallback')
+            assert not same, (tag,'HD artwork')
         results.append({'case':tag, 'frames':3000, 'native_interpreter':'exact', 'replay_frames':300})
         print(tag, 'native/interpreter and replay passed', flush=True)
     assert (out/'stock-native.hash').read_bytes() == (out/'diorama-native.hash').read_bytes()

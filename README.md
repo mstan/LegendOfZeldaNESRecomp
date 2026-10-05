@@ -61,6 +61,25 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
 | Right stick (first person) | Look horizontally and vertically |
 | Left stick / D-pad / arrow keys (first person) | Move relative to the camera |
 
+## Zelda Remastered HD Mod
+
+The cycle build uses the original USA PRG0 ROM for every presentation mode.
+Remastered is installed and selected through **Mods** in the same executable.
+Create a local package from your existing Mesen pack:
+
+```sh
+python tools/import_hdpack.py --pack "/path/to/pack" --rom "/path/to/Legend of Zelda.NES" --out "Zelda-Remastered.nesmod"
+```
+
+Install that archive in the launcher's Mods page, then enable **Zelda Remastered
+HD** before starting. It is disabled by default and shares an exclusion group
+with voxel views. The framework verifies the pack's IPS and applies it to an
+in-memory cartridge copy; your ROM stays unchanged. The included pack creator
+notice is preserved. Texture/background presentation uses the original PPU;
+replacement music and sound files remain unsupported. To return to stock,
+disable the feature in the launcher and restart. Pack/patch selection is
+read-only during gameplay, and save states require matching assets and options.
+
 ## Voxel 3D (experimental)
 
 <p align="center">
@@ -135,13 +154,14 @@ cmake -S . -B build-cycle -G "Visual Studio 17 2022" -A x64 -DNESRECOMP_ROM="F:/
 cmake --build build-cycle --config Release
 ```
 
-Choose the same USA PRG0 ROM at runtime. For the local IPS-patched Remastered target and an explicit legacy build, see [CYCLE-MIGRATION.md](CYCLE-MIGRATION.md).
+Choose the same USA PRG0 ROM at runtime. Remastered uses the Mods importer above. For an explicit legacy build, see [CYCLE-MIGRATION.md](CYCLE-MIGRATION.md).
 
 ## Architecture
 
 The original 6502 code is translated to cycle-aware C and compiled to native code. Unprofiled code and cartridge work-RAM code safely use the cycle interpreter. The PPU, APU and mapper advance with the guest CPU.
 
-- `game-cycle-stock.toml` / `game-cycle-hd.toml` — cycle target configuration
+- `game-cycle-stock.toml` — default cycle target configuration
+- `tools/import_hdpack.py` — shared framework HD-pack package importer with Zelda attribution
 - `cyc_extras.c` / `cycle_bridge.h` — cycle presentation, input and diagnostics adapter
 - `game.cfg` / `extras.c` — retained legacy configuration and hooks
 - `zelda_voxel.c` — Zelda tile-height profile and 3D view controls

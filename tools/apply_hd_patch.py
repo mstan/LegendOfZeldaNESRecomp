@@ -6,11 +6,10 @@ The HD ("Zelda Remastered") pack declares, in its hires.txt:
     <patch>ZeldaHD.ips,DAB79C84934F9AA5DB4E7DAD390E5D0C12443FA2
 
 i.e. it expects Mesen to apply ZeldaHD.ips to a clean PRG0 ROM (SHA-1 above)
-before running. Our pipeline is a STATIC recompiler: the ROM's code is
-translated to C at build time, so the patch cannot be applied at runtime.
-The correct equivalent is to apply the IPS to a throwaway copy of the stock
-ROM at regen time and recompile from THAT (the SNES MSU pattern — see
-snesrecomp/.../tools/apply_msu_patch.py).
+before running. Modern cycle builds apply this verified patch in memory through
+the shared Mods runtime. This older helper remains for the explicit legacy HD
+target and for independent patched-ROM regression comparisons. It writes a
+throwaway derivative and never edits the supplied ROM.
 
 What the patch actually contains (decoded from the 87 records, 3232 bytes):
   - Audio plumbing: new 6502 subroutines injected into free (0xFF) ROM space
@@ -24,8 +23,8 @@ $EC NextRoomId etc.), so backgrounds/tiles do not strictly require this patch;
 building from the patched ROM simply matches the exact ROM the pack was
 authored against (graphics + audio + text), eliminating calibration drift.
 
-This is opt-in: stock builds use the unpatched ROM and are byte-identical to
-today. Only the HD build feeds the patched ROM to the recompiler.
+This helper is optional for explicit legacy builds and independent comparisons.
+The default cycle executable loads stock and applies the selected HD Mod in memory.
 
 Usage:
     python tools/apply_hd_patch.py --rom zelda.nes \
