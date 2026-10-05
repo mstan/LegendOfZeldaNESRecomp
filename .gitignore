@@ -27,3 +27,10 @@ build-voxel*/
 build-mods*/
 zelda_voxel.png
 tests/*.nss
+
+# Cycle migration validation and local ROM derivatives
+build-cycle/
+build-legacy/
+cycle-evidence/
+__pycache__/
+release/

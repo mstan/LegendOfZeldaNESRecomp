@@ -1,0 +1,5 @@
+[game]
+name = "The Legend of Zelda (USA) Remastered"
+output_prefix = "zelda_hd"
+console = "nes"
+cycle_accurate = true

@@ -1,6 +1,7 @@
 # game.toml — The Legend of Zelda (NES, Mapper 1 / MMC1, 8 PRG banks, CHR RAM)
 
 [game]
+cycle_accurate = false
 output_prefix = "zelda"
 symbol_file = "symbols.sym"
 

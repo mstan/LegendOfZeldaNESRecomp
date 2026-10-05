@@ -1,0 +1,5 @@
+[game]
+name = "The Legend of Zelda (USA)"
+output_prefix = "zelda_stock"
+console = "nes"
+cycle_accurate = true

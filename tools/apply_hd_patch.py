@@ -6,11 +6,10 @@ The HD ("Zelda Remastered") pack declares, in its hires.txt:
     <patch>ZeldaHD.ips,DAB79C84934F9AA5DB4E7DAD390E5D0C12443FA2
 
 i.e. it expects Mesen to apply ZeldaHD.ips to a clean PRG0 ROM (SHA-1 above)
-before running. Our pipeline is a STATIC recompiler: the ROM's code is
-translated to C at build time, so the patch cannot be applied at runtime.
-The correct equivalent is to apply the IPS to a throwaway copy of the stock
-ROM at regen time and recompile from THAT (the SNES MSU pattern — see
-snesrecomp/.../tools/apply_msu_patch.py).
+before running. Modern cycle builds apply this verified patch in memory through
+the shared Mods runtime. This older helper remains for the explicit legacy HD
+target and for independent patched-ROM regression comparisons. It writes a
+throwaway derivative and never edits the supplied ROM.
 
 What the patch actually contains (decoded from the 87 records, 3232 bytes):
   - Audio plumbing: new 6502 subroutines injected into free (0xFF) ROM space
@@ -24,8 +23,8 @@ $EC NextRoomId etc.), so backgrounds/tiles do not strictly require this patch;
 building from the patched ROM simply matches the exact ROM the pack was
 authored against (graphics + audio + text), eliminating calibration drift.
 
-This is opt-in: stock builds use the unpatched ROM and are byte-identical to
-today. Only the HD build feeds the patched ROM to the recompiler.
+This helper is optional for explicit legacy builds and independent comparisons.
+The default cycle executable loads stock and applies the selected HD Mod in memory.
 
 Usage:
     python tools/apply_hd_patch.py --rom zelda.nes \
@@ -104,6 +103,12 @@ def main() -> int:
 
     ips = open(args.ips, "rb").read()
     n = apply_ips(rom, ips)
+    # Verified USA PRG0 is NES-SNROM: one battery-backed 8 KiB PRG RAM chip.
+    # The patched payload cannot use a database keyed by the stock CRC, so
+    # retain that geometry explicitly in its iNES header. Never guess for
+    # a mismatched input, and never modify the source ROM.
+    if got.lower() == VANILLA_PRG0_SHA1 and rom[:4] == b"NES\x1a":
+        rom[8] = 1
     open(args.out, "wb").write(rom)
     print(f"[apply_hd_patch] applied {n} IPS records -> {args.out} "
           f"({len(rom)} bytes, sha1 {rom_sha1(bytes(rom))})")
