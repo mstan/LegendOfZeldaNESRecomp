@@ -21,6 +21,44 @@ set(ZELDA_HD_GENERATED_ROOT "${CMAKE_SOURCE_DIR}/generated" CACHE PATH
 # surface; the feature remains disabled until selected in the launcher.
 set(NESRECOMP_ENABLE_MODS ON CACHE BOOL
     "Enable package mods for Zelda" FORCE)
+set(NESRECOMP_BACKEND "cycle" CACHE STRING "CPU backend: cycle or legacy")
+set_property(CACHE NESRECOMP_BACKEND PROPERTY STRINGS cycle legacy)
+if(NESRECOMP_BACKEND STREQUAL "cycle")
+    set(NESRECOMP_ROM "" CACHE FILEPATH "Original Zelda USA PRG0 ROM, not distributed")
+    set(ZELDA_HD_ROM "" CACHE FILEPATH "Locally IPS-patched Zelda Remastered ROM")
+    set(NESRECOMP_HOST_COMPILER "" CACHE FILEPATH "Optional prebuilt compiler")
+    include("${NESRECOMP_ROOT}/runner/cyc/project.cmake")
+    include("${NESRECOMP_ROOT}/runner/cyc/hdpack.cmake")
+    function(add_zelda_cycle TARGET VARIANT ROM)
+        nesrecomp_add_cycle_game(${TARGET}
+            ROM "${ROM}" GAME_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/game-cycle-${VARIANT}.toml"
+            RECOMPILER "${NESRECOMP_HOST_COMPILER}" SEED_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cyc_seeds_${VARIANT}.txt"
+            CAPTURE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cyc_captures_${VARIANT}.txt"
+            MODS GAME_ID "legend-of-zelda-us" PLAYERS 1 REGION NTSC
+            BOXART "${CMAKE_CURRENT_SOURCE_DIR}/boxart.tga"
+            HOST_EXTRAS cyc_extras.c zelda_voxel.c mods/zelda_voxel_plugin.c
+                "${NESRECOMP_ROOT}/runner/cyc/cyc_presentation.c"
+                "${NESRECOMP_ROOT}/runner/src/voxel_renderer.c"
+                "${NESRECOMP_ROOT}/runner/src/voxel_screen_profile.c"
+                "${NESRECOMP_ROOT}/runner/src/keybinds.c")
+        target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+        target_compile_definitions(${TARGET} PRIVATE ZELDA_CYCLE NESRECOMP_CYCLE_PRESENTATION)
+        if(VARIANT STREQUAL "hd")
+            nesrecomp_cyc_enable_hdpack(${TARGET})
+        endif()
+        add_custom_command(TARGET ${TARGET} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
+                "${CMAKE_CURRENT_SOURCE_DIR}/mods/preloaded" "$<TARGET_FILE_DIR:${TARGET}>/mods")
+    endfunction()
+    add_zelda_cycle(LegendOfZeldaNESRecomp stock "${NESRECOMP_ROM}")
+    if(ZELDA_HD_ROM)
+        add_zelda_cycle(LegendOfZeldaNESRecomp-HD hd "${ZELDA_HD_ROM}")
+    endif()
+    return()
+elseif(NOT NESRECOMP_BACKEND STREQUAL "legacy")
+    message(FATAL_ERROR "NESRECOMP_BACKEND must be cycle or legacy")
+endif()
+
 include(${NESRECOMP_ROOT}/runner/runner.cmake)
 
 list(APPEND CMAKE_PREFIX_PATH "${NESRECOMP_ROOT}/runner/external/SDL2/cmake")

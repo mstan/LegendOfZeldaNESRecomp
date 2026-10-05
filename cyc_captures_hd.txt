@@ -1,0 +1,3 @@
+# RAM code that ran on the interpreter with no compiled view (cycle backend).
+# Written by cyc_interp --capture-log (merged across runs); game.toml [game] cycle_capture_file.
+# insn ADDR BYTES COUNT | code ADDR HASH COUNT PCS + data HEX (1026 bytes) | volatile ADDR VALUE IMAGE COUNT

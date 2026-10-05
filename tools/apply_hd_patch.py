@@ -104,6 +104,12 @@ def main() -> int:
 
     ips = open(args.ips, "rb").read()
     n = apply_ips(rom, ips)
+    # Verified USA PRG0 is NES-SNROM: one battery-backed 8 KiB PRG RAM chip.
+    # The patched payload cannot use a database keyed by the stock CRC, so
+    # retain that geometry explicitly in its iNES header. Never guess for
+    # a mismatched input, and never modify the source ROM.
+    if got.lower() == VANILLA_PRG0_SHA1 and rom[:4] == b"NES\x1a":
+        rom[8] = 1
     open(args.out, "wb").write(rom)
     print(f"[apply_hd_patch] applied {n} IPS records -> {args.out} "
           f"({len(rom)} bytes, sha1 {rom_sha1(bytes(rom))})")

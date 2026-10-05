@@ -12,7 +12,7 @@
 Static recompilation of The Legend of Zelda (NES) for native PC.
 Built with the [NESRecomp](https://github.com/mstan/nesrecomp) framework.
 
-> **Status: Believed to be 100% playable.** Tested through the overworld and dungeon 7 without encountering issues. No known dispatch misses remain. If you find a bug, please open an issue.
+> **Cycle migration preview:** the cycle CPU is now the default source build, with the legacy backend still available. The earlier legacy build was tested through dungeon 7. Current cycle checks cover startup, an overworld route, save/replay and presentation modes; a new full-game audit is pending. See [CYCLE-MIGRATION.md](CYCLE-MIGRATION.md).
 
 ## Acknowledgments
 
@@ -25,7 +25,7 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
 - Enemies and combat
 - Caves (old man, merchants, dungeon entrances)
 - Inventory / pause subscreen
-- Battery-backed save persistence (`zelda.srm` next to executable)
+- Battery-backed save persistence (`saves/<ROM stem>.sav` beside the executable); older raw 8 KiB `.srm` progress imports through the launcher
 
 ## Quick Start
 
@@ -41,13 +41,16 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
 | A          | Z |
 | B          | X |
 | Start      | Enter |
-| Select     | Tab |
+| Select     | Backslash |
 
 | Hotkey | Action |
 |--------|--------|
-| F5     | Toggle turbo (fast-forward) |
-| F6     | Save state |
-| F7     | Load state |
+| Escape | Menu/settings |
+| Tab | Hold fast-forward |
+| F8 | Save cycle state |
+| F9 | Load cycle state |
+| F11 | Fullscreen |
+| F12 | Screenshot |
 | Numpad 0 | Toggle Voxel 3D |
 | Numpad 8 / 2 | Increase / decrease camera pitch |
 | Numpad 4 / 6 | Adjust camera yaw left / right |
@@ -123,30 +126,34 @@ chmod +x setup.sh && ./setup.sh
 ```
 
 This initializes the pinned [nesrecomp](https://github.com/mstan/nesrecomp)
-submodule and links the Nestopia oracle core.
+and recomp-ui submodules. Cycle configuration generates native code directly from your supplied ROM.
 
 Then build:
 
 ```bash
-cmake -S . -B build -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release
+cmake -S . -B build-cycle -G "Visual Studio 17 2022" -A x64 -DNESRECOMP_ROM="F:/ROMs/Legend of Zelda.NES"
+cmake --build build-cycle --config Release
 ```
 
-Place your `Legend of Zelda (USA).nes` ROM in the build directory or select it at runtime.
+Choose the same USA PRG0 ROM at runtime. For the local IPS-patched Remastered target and an explicit legacy build, see [CYCLE-MIGRATION.md](CYCLE-MIGRATION.md).
 
 ## Architecture
 
-This is a **static recompiler**, not an emulator. The original 6502 machine code is translated to C at build time, then compiled to native x64. The NES PPU, APU, and mapper are simulated by the runner library.
+The original 6502 code is translated to cycle-aware C and compiled to native code. Unprofiled code and cartridge work-RAM code safely use the cycle interpreter. The PPU, APU and mapper advance with the guest CPU.
 
-- `game.cfg` — recompiler configuration (bank switch, inline dispatch, extra functions, extra labels)
-- `extras.c` — game-specific hooks (SRAM persistence, entity diagnostics)
+- `game-cycle-stock.toml` / `game-cycle-hd.toml` — cycle target configuration
+- `cyc_extras.c` / `cycle_bridge.h` — cycle presentation, input and diagnostics adapter
+- `game.cfg` / `extras.c` — retained legacy configuration and hooks
 - `zelda_voxel.c` — Zelda tile-height profile and 3D view controls
-- `generated/` — auto-generated C code (do not edit manually)
+- `build-cycle/cycle-*` — generated cycle code (do not edit manually)
+- `generated/` — retained legacy generated inputs
 - `nesrecomp/` — framework submodule (recompiler + runner)
 
 ## Known Limitations
 
-- Audio is basic (APU register writes are captured but full audio mixing is work-in-progress)
+- Remastered preserves the existing sampler limitations for unsupported conditions or missing images. HD-pack replacement music and sound files remain unsupported.
+- Legacy binary save states do not transfer to the cycle backend. Raw battery progress remains portable.
+- Voxel views retain their existing experimental camera and geometry limitations.
 
 ## License
 

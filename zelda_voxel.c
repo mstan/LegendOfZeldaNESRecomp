@@ -10,7 +10,11 @@
 #include "config.h"
 #include "controller.h"
 #include "keybinds.h"
+#ifdef ZELDA_CYCLE
+#include "cycle_bridge.h"
+#else
 #include "nes_runtime.h"
+#endif
 #include "voxel_renderer.h"
 
 #include <SDL.h>
@@ -547,6 +551,10 @@ void zelda_voxel_configure_mod(int first_person,
 }
 
 void zelda_voxel_init(void) {
+#ifdef ZELDA_CYCLE
+    cyc_video_request_width(s_mod_enabled ? ZELDA_OUTPUT_WIDTH : 256);
+    cyc_presentation_sync();
+#endif
     if (s_mod_enabled) {
         g_render_width = ZELDA_OUTPUT_WIDTH;
         g_widescreen_left = ZELDA_WIDE_MARGIN;
@@ -1128,3 +1136,208 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
             s_exit_loading = 0;
     }
 }
+
+#ifdef ZELDA_CYCLE
+#include "mod_savestate.h"
+#include "mod_runtime.h"
+/* Pointer-free room, transition and camera state. Scratch arrays are included
+ * too so a restored preview has exactly the same host state before rendering. */
+typedef struct {
+    uint32_t version;
+    float s_heights[ZELDA_TILE_COUNT];
+    uint8_t s_classification[ZELDA_TILE_COUNT];
+    int s_queue[ZELDA_TILE_COUNT];
+    uint8_t s_room_tiles[ZELDA_TILE_COUNT];
+    uint8_t s_room_attrs[ZELDA_ATTR_COUNT];
+    float s_room_heights[ZELDA_TILE_COUNT];
+    uint8_t s_transition_tiles[ZELDA_TRANSITION_COUNT];
+    uint8_t s_transition_palettes[ZELDA_TRANSITION_COUNT];
+    float s_transition_heights[ZELDA_TRANSITION_COUNT];
+    int s_transition_columns;
+    int s_transition_rows;
+    int s_room_snapshot_valid;
+    uint32_t s_stable_frame[ZELDA_OUTPUT_WIDTH * ZELDA_OUTPUT_HEIGHT];
+    int s_stable_frame_valid;
+    int s_was_scrolling;
+    int s_exit_loading;
+    int s_mod_enabled;
+    int s_view_enabled;
+    int s_first_person;
+    float s_first_person_heading;
+    float s_first_person_look_pitch;
+    int s_first_person_heading_initialized;
+    float s_left_stick_x;
+    float s_left_stick_y;
+    float s_right_stick_x;
+    float s_right_stick_y;
+    float s_diorama_yaw_remainder;
+    float s_diorama_pitch_remainder;
+    int s_first_person_last_mapped_direction;
+    uint8_t s_first_person_raw_buttons;
+    uint64_t s_first_person_raw_buttons_frame;
+    int s_first_person_input_overridden;
+    int s_pitch;
+    int s_yaw;
+    int s_roll;
+    int s_zoom;
+    int s_sprite_scale;
+    float s_render_pitch;
+    float s_render_yaw;
+    float s_render_roll;
+    float s_render_zoom;
+    float s_render_sprite_scale;
+    int s_default_pitch;
+    int s_default_yaw;
+    int s_default_roll;
+    int s_default_zoom;
+    int s_default_sprite_scale;
+} ZeldaVoxelCycleState;
+_Static_assert(sizeof(ZeldaVoxelCycleState) <= NES_MOD_SAVESTATE_BLOB_CAP, "voxel record size");
+int zelda_voxel_cycle_mode(void) {return !s_mod_enabled?0:s_first_person?2:1;}
+static int voxel_save(uint8_t *buf,int cap) {
+    if(cap<(int)sizeof(ZeldaVoxelCycleState))return -1;
+    ZeldaVoxelCycleState *state=calloc(1,sizeof(*state));if(!state)return -1;state->version=1;
+    memcpy(&state->s_heights,&s_heights,sizeof s_heights);
+    memcpy(&state->s_classification,&s_classification,sizeof s_classification);
+    memcpy(&state->s_queue,&s_queue,sizeof s_queue);
+    memcpy(&state->s_room_tiles,&s_room_tiles,sizeof s_room_tiles);
+    memcpy(&state->s_room_attrs,&s_room_attrs,sizeof s_room_attrs);
+    memcpy(&state->s_room_heights,&s_room_heights,sizeof s_room_heights);
+    memcpy(&state->s_transition_tiles,&s_transition_tiles,sizeof s_transition_tiles);
+    memcpy(&state->s_transition_palettes,&s_transition_palettes,sizeof s_transition_palettes);
+    memcpy(&state->s_transition_heights,&s_transition_heights,sizeof s_transition_heights);
+    memcpy(&state->s_transition_columns,&s_transition_columns,sizeof s_transition_columns);
+    memcpy(&state->s_transition_rows,&s_transition_rows,sizeof s_transition_rows);
+    memcpy(&state->s_room_snapshot_valid,&s_room_snapshot_valid,sizeof s_room_snapshot_valid);
+    memcpy(&state->s_stable_frame,&s_stable_frame,sizeof s_stable_frame);
+    memcpy(&state->s_stable_frame_valid,&s_stable_frame_valid,sizeof s_stable_frame_valid);
+    memcpy(&state->s_was_scrolling,&s_was_scrolling,sizeof s_was_scrolling);
+    memcpy(&state->s_exit_loading,&s_exit_loading,sizeof s_exit_loading);
+    memcpy(&state->s_mod_enabled,&s_mod_enabled,sizeof s_mod_enabled);
+    memcpy(&state->s_view_enabled,&s_view_enabled,sizeof s_view_enabled);
+    memcpy(&state->s_first_person,&s_first_person,sizeof s_first_person);
+    memcpy(&state->s_first_person_heading,&s_first_person_heading,sizeof s_first_person_heading);
+    memcpy(&state->s_first_person_look_pitch,&s_first_person_look_pitch,sizeof s_first_person_look_pitch);
+    memcpy(&state->s_first_person_heading_initialized,&s_first_person_heading_initialized,sizeof s_first_person_heading_initialized);
+    memcpy(&state->s_left_stick_x,&s_left_stick_x,sizeof s_left_stick_x);
+    memcpy(&state->s_left_stick_y,&s_left_stick_y,sizeof s_left_stick_y);
+    memcpy(&state->s_right_stick_x,&s_right_stick_x,sizeof s_right_stick_x);
+    memcpy(&state->s_right_stick_y,&s_right_stick_y,sizeof s_right_stick_y);
+    memcpy(&state->s_diorama_yaw_remainder,&s_diorama_yaw_remainder,sizeof s_diorama_yaw_remainder);
+    memcpy(&state->s_diorama_pitch_remainder,&s_diorama_pitch_remainder,sizeof s_diorama_pitch_remainder);
+    memcpy(&state->s_first_person_last_mapped_direction,&s_first_person_last_mapped_direction,sizeof s_first_person_last_mapped_direction);
+    memcpy(&state->s_first_person_raw_buttons,&s_first_person_raw_buttons,sizeof s_first_person_raw_buttons);
+    memcpy(&state->s_first_person_raw_buttons_frame,&s_first_person_raw_buttons_frame,sizeof s_first_person_raw_buttons_frame);
+    memcpy(&state->s_first_person_input_overridden,&s_first_person_input_overridden,sizeof s_first_person_input_overridden);
+    memcpy(&state->s_pitch,&s_pitch,sizeof s_pitch);
+    memcpy(&state->s_yaw,&s_yaw,sizeof s_yaw);
+    memcpy(&state->s_roll,&s_roll,sizeof s_roll);
+    memcpy(&state->s_zoom,&s_zoom,sizeof s_zoom);
+    memcpy(&state->s_sprite_scale,&s_sprite_scale,sizeof s_sprite_scale);
+    memcpy(&state->s_render_pitch,&s_render_pitch,sizeof s_render_pitch);
+    memcpy(&state->s_render_yaw,&s_render_yaw,sizeof s_render_yaw);
+    memcpy(&state->s_render_roll,&s_render_roll,sizeof s_render_roll);
+    memcpy(&state->s_render_zoom,&s_render_zoom,sizeof s_render_zoom);
+    memcpy(&state->s_render_sprite_scale,&s_render_sprite_scale,sizeof s_render_sprite_scale);
+    memcpy(&state->s_default_pitch,&s_default_pitch,sizeof s_default_pitch);
+    memcpy(&state->s_default_yaw,&s_default_yaw,sizeof s_default_yaw);
+    memcpy(&state->s_default_roll,&s_default_roll,sizeof s_default_roll);
+    memcpy(&state->s_default_zoom,&s_default_zoom,sizeof s_default_zoom);
+    memcpy(&state->s_default_sprite_scale,&s_default_sprite_scale,sizeof s_default_sprite_scale);
+    memcpy(buf,state,sizeof(*state));free(state);return sizeof(ZeldaVoxelCycleState);
+}
+static int voxel_check(const ZeldaVoxelCycleState *state) {
+    if(state->version!=1 || state->s_mod_enabled!=s_mod_enabled || state->s_first_person!=s_first_person)return 0;
+    if(state->s_view_enabled<0 || state->s_view_enabled>1)return 0;
+    if(state->s_room_snapshot_valid<0 || state->s_room_snapshot_valid>1)return 0;
+    if(state->s_stable_frame_valid<0 || state->s_stable_frame_valid>1)return 0;
+    if(state->s_was_scrolling<0 || state->s_was_scrolling>1)return 0;
+    if(state->s_exit_loading<0 || state->s_exit_loading>1)return 0;
+    if(state->s_first_person_heading_initialized<0 || state->s_first_person_heading_initialized>1)return 0;
+    if(state->s_first_person_input_overridden<0 || state->s_first_person_input_overridden>1)return 0;
+    if(state->s_default_pitch!=s_default_pitch)return 0;
+    if(state->s_default_yaw!=s_default_yaw)return 0;
+    if(state->s_default_roll!=s_default_roll)return 0;
+    if(state->s_default_zoom!=s_default_zoom)return 0;
+    if(state->s_default_sprite_scale!=s_default_sprite_scale)return 0;
+    if(state->s_transition_columns<0 || state->s_transition_columns>ZELDA_TRANSITION_COLUMNS || state->s_transition_rows<0 || state->s_transition_rows>ZELDA_TRANSITION_ROWS)return 0;
+    for(size_t i=0;i<sizeof(state->s_heights)/sizeof(float);i++)if(!isfinite(state->s_heights[i]))return 0;
+    for(size_t i=0;i<sizeof(state->s_room_heights)/sizeof(float);i++)if(!isfinite(state->s_room_heights[i]))return 0;
+    for(size_t i=0;i<sizeof(state->s_transition_heights)/sizeof(float);i++)if(!isfinite(state->s_transition_heights[i]))return 0;
+    if(!isfinite(state->s_first_person_heading) || fabsf(state->s_first_person_heading)>100000.0f)return 0;
+    if(!isfinite(state->s_first_person_look_pitch) || fabsf(state->s_first_person_look_pitch)>100000.0f)return 0;
+    if(!isfinite(state->s_left_stick_x) || fabsf(state->s_left_stick_x)>100000.0f)return 0;
+    if(!isfinite(state->s_left_stick_y) || fabsf(state->s_left_stick_y)>100000.0f)return 0;
+    if(!isfinite(state->s_right_stick_x) || fabsf(state->s_right_stick_x)>100000.0f)return 0;
+    if(!isfinite(state->s_right_stick_y) || fabsf(state->s_right_stick_y)>100000.0f)return 0;
+    if(!isfinite(state->s_diorama_yaw_remainder) || fabsf(state->s_diorama_yaw_remainder)>100000.0f)return 0;
+    if(!isfinite(state->s_diorama_pitch_remainder) || fabsf(state->s_diorama_pitch_remainder)>100000.0f)return 0;
+    if(!isfinite(state->s_render_pitch) || fabsf(state->s_render_pitch)>100000.0f)return 0;
+    if(!isfinite(state->s_render_yaw) || fabsf(state->s_render_yaw)>100000.0f)return 0;
+    if(!isfinite(state->s_render_roll) || fabsf(state->s_render_roll)>100000.0f)return 0;
+    if(!isfinite(state->s_render_zoom) || fabsf(state->s_render_zoom)>100000.0f)return 0;
+    if(!isfinite(state->s_render_sprite_scale) || fabsf(state->s_render_sprite_scale)>100000.0f)return 0;
+    if(state->s_pitch<-90 || state->s_pitch>90 || state->s_yaw<-360 || state->s_yaw>360 || state->s_zoom<1 || state->s_zoom>1000 || state->s_sprite_scale<1 || state->s_sprite_scale>1000)return 0;
+    return 1;
+}
+static int voxel_validate(const uint8_t *buf,int len) {
+    if(!buf || len!=(int)sizeof(ZeldaVoxelCycleState))return 0;
+    ZeldaVoxelCycleState *state=malloc(sizeof(*state));if(!state)return 0;memcpy(state,buf,sizeof(*state));int ok=voxel_check(state);free(state);return ok;
+}
+static int voxel_load(const uint8_t *buf,int len) {
+    if(!voxel_validate(buf,len))return 0;
+    ZeldaVoxelCycleState *state=malloc(sizeof(*state));if(!state)return 0;memcpy(state,buf,sizeof(*state));
+    memcpy(&s_heights,&state->s_heights,sizeof s_heights);
+    memcpy(&s_classification,&state->s_classification,sizeof s_classification);
+    memcpy(&s_queue,&state->s_queue,sizeof s_queue);
+    memcpy(&s_room_tiles,&state->s_room_tiles,sizeof s_room_tiles);
+    memcpy(&s_room_attrs,&state->s_room_attrs,sizeof s_room_attrs);
+    memcpy(&s_room_heights,&state->s_room_heights,sizeof s_room_heights);
+    memcpy(&s_transition_tiles,&state->s_transition_tiles,sizeof s_transition_tiles);
+    memcpy(&s_transition_palettes,&state->s_transition_palettes,sizeof s_transition_palettes);
+    memcpy(&s_transition_heights,&state->s_transition_heights,sizeof s_transition_heights);
+    memcpy(&s_transition_columns,&state->s_transition_columns,sizeof s_transition_columns);
+    memcpy(&s_transition_rows,&state->s_transition_rows,sizeof s_transition_rows);
+    memcpy(&s_room_snapshot_valid,&state->s_room_snapshot_valid,sizeof s_room_snapshot_valid);
+    memcpy(&s_stable_frame,&state->s_stable_frame,sizeof s_stable_frame);
+    memcpy(&s_stable_frame_valid,&state->s_stable_frame_valid,sizeof s_stable_frame_valid);
+    memcpy(&s_was_scrolling,&state->s_was_scrolling,sizeof s_was_scrolling);
+    memcpy(&s_exit_loading,&state->s_exit_loading,sizeof s_exit_loading);
+    memcpy(&s_mod_enabled,&state->s_mod_enabled,sizeof s_mod_enabled);
+    memcpy(&s_view_enabled,&state->s_view_enabled,sizeof s_view_enabled);
+    memcpy(&s_first_person,&state->s_first_person,sizeof s_first_person);
+    memcpy(&s_first_person_heading,&state->s_first_person_heading,sizeof s_first_person_heading);
+    memcpy(&s_first_person_look_pitch,&state->s_first_person_look_pitch,sizeof s_first_person_look_pitch);
+    memcpy(&s_first_person_heading_initialized,&state->s_first_person_heading_initialized,sizeof s_first_person_heading_initialized);
+    memcpy(&s_left_stick_x,&state->s_left_stick_x,sizeof s_left_stick_x);
+    memcpy(&s_left_stick_y,&state->s_left_stick_y,sizeof s_left_stick_y);
+    memcpy(&s_right_stick_x,&state->s_right_stick_x,sizeof s_right_stick_x);
+    memcpy(&s_right_stick_y,&state->s_right_stick_y,sizeof s_right_stick_y);
+    memcpy(&s_diorama_yaw_remainder,&state->s_diorama_yaw_remainder,sizeof s_diorama_yaw_remainder);
+    memcpy(&s_diorama_pitch_remainder,&state->s_diorama_pitch_remainder,sizeof s_diorama_pitch_remainder);
+    memcpy(&s_first_person_last_mapped_direction,&state->s_first_person_last_mapped_direction,sizeof s_first_person_last_mapped_direction);
+    memcpy(&s_first_person_raw_buttons,&state->s_first_person_raw_buttons,sizeof s_first_person_raw_buttons);
+    memcpy(&s_first_person_raw_buttons_frame,&state->s_first_person_raw_buttons_frame,sizeof s_first_person_raw_buttons_frame);
+    memcpy(&s_first_person_input_overridden,&state->s_first_person_input_overridden,sizeof s_first_person_input_overridden);
+    memcpy(&s_pitch,&state->s_pitch,sizeof s_pitch);
+    memcpy(&s_yaw,&state->s_yaw,sizeof s_yaw);
+    memcpy(&s_roll,&state->s_roll,sizeof s_roll);
+    memcpy(&s_zoom,&state->s_zoom,sizeof s_zoom);
+    memcpy(&s_sprite_scale,&state->s_sprite_scale,sizeof s_sprite_scale);
+    memcpy(&s_render_pitch,&state->s_render_pitch,sizeof s_render_pitch);
+    memcpy(&s_render_yaw,&state->s_render_yaw,sizeof s_render_yaw);
+    memcpy(&s_render_roll,&state->s_render_roll,sizeof s_render_roll);
+    memcpy(&s_render_zoom,&state->s_render_zoom,sizeof s_render_zoom);
+    memcpy(&s_render_sprite_scale,&state->s_render_sprite_scale,sizeof s_render_sprite_scale);
+    memcpy(&s_default_pitch,&state->s_default_pitch,sizeof s_default_pitch);
+    memcpy(&s_default_yaw,&state->s_default_yaw,sizeof s_default_yaw);
+    memcpy(&s_default_roll,&state->s_default_roll,sizeof s_default_roll);
+    memcpy(&s_default_zoom,&state->s_default_zoom,sizeof s_default_zoom);
+    memcpy(&s_default_sprite_scale,&state->s_default_sprite_scale,sizeof s_default_sprite_scale);
+    free(state);return 1;
+}
+NES_MOD_CONSTRUCTOR(zelda_voxel_cycle_state) {
+    if(!nes_mod_register_savestate_hook("zelda.cycle.voxel",voxel_save,voxel_load) || !nes_mod_register_savestate_validator("zelda.cycle.voxel",voxel_validate))
+        fprintf(stderr,"[Voxel] Cannot register cycle save state\n");
+}
+#endif
