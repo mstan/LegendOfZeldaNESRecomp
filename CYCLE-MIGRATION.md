@@ -56,6 +56,8 @@ Run the maintained game regression (Pillow needed for the optional HD checks):
 python tools/cycle_probe.py --stock-exe build-cycle/Release/LegendOfZeldaNESRecomp.exe --stock-rom "/path/to/Legend of Zelda.NES" --hd-exe build-cycle/Release/LegendOfZeldaNESRecomp-HD.exe --hd-rom build-cycle/zelda_hd.nes --hdpack "/path/to/pack" --out cycle-evidence/regression
 ```
 
-Owner playtests for stock, diorama, first-person and Remastered are required
-before integration. Source changes remain on feature branches; no merge or
-publication has occurred.
+The owner briefly played stock, diorama, first-person and Remastered on
+2026-10-04 and reported “all four pass.” The owner also requested migration of
+HD packs into the shared modern Mods infrastructure, including adoption work
+for other games. That additional work and umbrella integration remain pending.
+Source changes remain on feature branches; no merge or publication has occurred.
