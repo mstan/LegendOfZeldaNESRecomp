@@ -1,0 +1,24 @@
+format_version = 1
+id = "nesrecomp.developer.diagnostics"
+version = "1.0.0"
+name = "Startup and Crash Diagnostics"
+author = "NESRecomp"
+description = "Records startup, host settings, renderer, session progress and errors for bug reports. On Windows, unhandled crashes also create a small minidump. Files stay on your computer."
+license = "MIT"
+resolver = "declarative"
+save_compatibility = "stock"
+
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "3fe272fb"
+
+[[feature]]
+id = "diagnostics"
+name = "Startup and Crash Diagnostics"
+description = "Enable before PLAY, reproduce the problem, then share the newest .log and any matching .dmp from the diagnostics folder beside the program. Disable after testing. Logs and dumps may contain local paths and process information; review before sharing."
+group = "Developer"
+default_enabled = false
+
+[[plugin]]
+feature = "diagnostics"
+id = "nesrecomp.diagnostics"

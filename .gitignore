@@ -32,5 +32,7 @@ tests/*.nss
 build-cycle/
 build-legacy/
 cycle-evidence/
+diagnostics/
+*.dmp
 __pycache__/
 release/

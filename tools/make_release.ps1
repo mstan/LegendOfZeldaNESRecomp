@@ -73,7 +73,7 @@ foreach ($target in $variants) {
         if (-not $framework) { $framework = Join-Path $root 'nesrecomp' }
         Copy-Item -LiteralPath (Join-Path $framework 'tools\package_hdpack.py') -Destination (Join-Path $stage 'tools')
         Copy-Item -LiteralPath (Join-Path $root 'hdpatch\ZeldaRemasteredReadme.txt') -Destination (Join-Path $stage 'hdpatch')
-        foreach ($doc in 'CYCLE-MIGRATION.md', 'RELEASE_NOTES.md', 'LICENSE') { Copy-Item -LiteralPath (Join-Path $root $doc) -Destination $stage }
+        foreach ($doc in 'CYCLE-MIGRATION.md', 'RELEASE_NOTES.md', 'DIAGNOSTICS.md', 'LICENSE') { Copy-Item -LiteralPath (Join-Path $root $doc) -Destination $stage }
         $readme = @'
 The Legend of Zelda - USA/NTSC cycle preview
 
@@ -99,10 +99,15 @@ camera; the right stick looks. HD is mutually exclusive with voxel views. Disabl
 restart to return to stock. Save states require matching pack assets/patch.
 These builds are development previews. Read CYCLE-MIGRATION.md for coverage
 and existing presentation limitations.
+
+For a startup crash: open Mods and enable Startup and Crash Diagnostics,
+then click PLAY and reproduce the issue. Share the newest .log and matching
+.dmp, if present, from the diagnostics folder beside the program. Disable the
+mod after testing. See DIAGNOSTICS.md for fallback storage and privacy details.
 '@
         [IO.File]::WriteAllText((Join-Path $stage 'README.txt'), $readme, [Text.Encoding]::UTF8)
         $forbidden = @(Get-ChildItem -LiteralPath $stage -File -Recurse | Where-Object {
-            $_.Extension -in '.nes', '.srm', '.sav', '.state', '.cycstate', '.log' -or
+            $_.Extension -in '.nes', '.srm', '.sav', '.state', '.cycstate', '.log', '.dmp' -or
             $_.Name -in 'config.ini', 'keybinds.ini', 'debug.ini', 'rom.cfg', 'state.toml', 'hires.txt'
         })
         if ($forbidden.Count) { throw 'Player/debug/third-party data found in staging.' }
@@ -111,6 +116,12 @@ and existing presentation limitations.
         Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip
         Write-Host "Created local preview: $zip"
         Write-Host "SHA256: $((Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash)"
+        $pdb = Join-Path $bin "$target.pdb"
+        if (-not (Test-Path -LiteralPath $pdb)) { throw 'Missing matching release PDB for crash diagnosis.' }
+        $symbols = Join-Path $out "$target-windows-x64-symbols.zip"
+        if (Test-Path -LiteralPath $symbols) { Remove-Item -LiteralPath $symbols }
+        Compress-Archive -LiteralPath $pdb -DestinationPath $symbols
+        Write-Host "Created matching crash symbols: $symbols"
     } finally {
         $stageAbsolute = [IO.Path]::GetFullPath($stage)
         $outPrefix = [IO.Path]::GetFullPath($out).TrimEnd('\') + '\'

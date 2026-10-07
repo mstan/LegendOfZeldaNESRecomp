@@ -35,6 +35,11 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
 
 ## Controls
 
+For silent startup failures, enable **Startup and Crash Diagnostics** in
+**Mods** before PLAY, then share the newest log and any matching Windows
+minidump from `diagnostics` beside the program. This mod is disabled by default.
+See [DIAGNOSTICS.md](DIAGNOSTICS.md).
+
 | NES Button | Keyboard |
 |------------|----------|
 | D-Pad      | Arrow keys |

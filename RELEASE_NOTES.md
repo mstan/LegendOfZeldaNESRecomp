@@ -1,21 +1,19 @@
-# Unpublished cycle migration preview
+# v1.9.1 — startup and crash diagnostics
 
-Zelda now builds with the cycle CPU by default. The legacy backend remains
-available through an explicit CMake selection. Stock preserves the existing
-optional voxel diorama and first-person modes, camera controls and package
-settings. Remastered is now a modern HD-pack Mod in the same stock executable,
-using the shared framework importer, installed assets and verified in-memory
-IPS patch. Select it through Mods before Play. Original files stay untouched.
-The existing graphics sampler uses actual PPU fetch metadata; original NES
-audio continues without replacement music.
+- Adds a bundled **Startup and Crash Diagnostics** mod, disabled by default.
+  Enable it in Mods before PLAY to record startup, host settings, renderer,
+  progress and exit details. Windows crashes attempt a matching minidump.
+- Capture begins when the mod is enabled, including the first PLAY handoff.
+  Persistent selections start capture before the launcher opens on later runs.
+- Displays error dialogs for game SDL initialization, window/renderer creation
+  and ROM-loading failures instead of silently returning to the desktop.
+- Retains matching release symbols in a separate download for dump analysis.
 
-The cartridge uses its actual 8 KiB battery geometry, accepting older raw
-progress through the launcher. Cycle states save presentation caches and
-validate matching modes before changing gameplay. Legacy binary states
-remain specific to their old backend.
+Share the newest `.log` and matching `.dmp`, if present, from `diagnostics`
+beside the executable. See DIAGNOSTICS.md for fallback storage and privacy.
+The reported v1.9.0 PLAY crash remains under investigation; this release adds
+evidence collection and does not claim to fix an unconfirmed cause.
 
-Local archives contain the executable, SDL/UI dependencies, default-off voxel
-packages, the shared HD importer and original pack creator notice. They contain
-no ROM, HD art, player settings or progress. The owner accepted the earlier
-four cycle variants; the updated HD Mod and branch integration remain pending.
-These notes do not announce a published release.
+The cycle backend, stock ROM requirement, existing voxel modes and HD Mods
+workflow are retained. No ROM, third-party HD art, settings or personal progress
+is included. Legacy binary save states still require the legacy backend.

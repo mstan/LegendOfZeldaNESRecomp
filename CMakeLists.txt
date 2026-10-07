@@ -41,6 +41,14 @@ if(NESRECOMP_BACKEND STREQUAL "cycle")
                 "${NESRECOMP_ROOT}/runner/src/keybinds.c")
         target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
         target_compile_definitions(${TARGET} PRIVATE ZELDA_CYCLE NESRECOMP_CYCLE_PRESENTATION)
+        set(ZELDA_BUILD_REVISION "development" CACHE STRING "Source revision for diagnostic logs")
+        target_compile_definitions(${TARGET} PRIVATE
+            CYC_BUILD_VERSION="1.9.1" CYC_BUILD_REVISION="${ZELDA_BUILD_REVISION}")
+        if(MSVC)
+            # Keep an optimized release while retaining its matching crash symbols.
+            target_compile_options(${TARGET} PRIVATE /Zi)
+            target_link_options(${TARGET} PRIVATE /DEBUG /OPT:REF /OPT:ICF)
+        endif()
         add_custom_command(TARGET ${TARGET} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory
                 "${CMAKE_CURRENT_SOURCE_DIR}/mods/preloaded" "$<TARGET_FILE_DIR:${TARGET}>/mods")
