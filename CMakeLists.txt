@@ -43,7 +43,7 @@ if(NESRECOMP_BACKEND STREQUAL "cycle")
         target_compile_definitions(${TARGET} PRIVATE ZELDA_CYCLE NESRECOMP_CYCLE_PRESENTATION)
         set(ZELDA_BUILD_REVISION "development" CACHE STRING "Source revision for diagnostic logs")
         target_compile_definitions(${TARGET} PRIVATE
-            CYC_BUILD_VERSION="1.9.1" CYC_BUILD_REVISION="${ZELDA_BUILD_REVISION}")
+            CYC_BUILD_VERSION="1.9.2" CYC_BUILD_REVISION="${ZELDA_BUILD_REVISION}")
         if(MSVC)
             # Keep an optimized release while retaining its matching crash symbols.
             target_compile_options(${TARGET} PRIVATE /Zi)
