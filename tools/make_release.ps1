@@ -73,6 +73,7 @@ foreach ($target in $variants) {
         if (-not $framework) { $framework = Join-Path $root 'nesrecomp' }
         Copy-Item -LiteralPath (Join-Path $framework 'tools\package_hdpack.py') -Destination (Join-Path $stage 'tools')
         Copy-Item -LiteralPath (Join-Path $root 'hdpatch\ZeldaRemasteredReadme.txt') -Destination (Join-Path $stage 'hdpatch')
+        Copy-Item -LiteralPath (Join-Path $root 'tools\HD-IMPORTER-README.txt') -Destination (Join-Path $stage 'HD-IMPORTER-README.txt')
         foreach ($doc in 'CYCLE-MIGRATION.md', 'RELEASE_NOTES.md', 'DIAGNOSTICS.md', 'LICENSE') { Copy-Item -LiteralPath (Join-Path $root $doc) -Destination $stage }
         $readme = @'
 The Legend of Zelda - USA/NTSC cycle preview
@@ -126,6 +127,10 @@ mod after testing. See DIAGNOSTICS.md for fallback storage and privacy details.
         $stageAbsolute = [IO.Path]::GetFullPath($stage)
         $outPrefix = [IO.Path]::GetFullPath($out).TrimEnd('\') + '\'
         if (-not $stageAbsolute.StartsWith($outPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw "Refusing cleanup outside release directory: $stageAbsolute" }
-        Remove-Item -LiteralPath $stageAbsolute -Recurse -Force
+        if (((Get-Item -LiteralPath $stageAbsolute).Attributes -band [IO.FileAttributes]::ReparsePoint) -or
+            @(Get-ChildItem -LiteralPath $stageAbsolute -Recurse -Force | Where-Object {
+            $_.Attributes -band [IO.FileAttributes]::ReparsePoint -or $_.Name -eq '.git'
+        }).Count) { throw 'Unexpected link or repository in generated release staging; refusing cleanup.' }
+        Remove-Item -LiteralPath $stageAbsolute -Recurse -ErrorAction Stop
     }
 }

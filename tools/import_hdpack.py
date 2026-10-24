@@ -16,6 +16,8 @@ def main():
     generator = here/'package_hdpack.py'
     if not generator.is_file():
         generator = args.framework/'tools/package_hdpack.py'
+    if not generator.is_file():
+        parser.error('Missing package_hdpack.py. Extract the complete HD importer download or initialize the framework submodule.')
     startup = None
     if hasattr(subprocess, 'STARTUPINFO'):
         startup = subprocess.STARTUPINFO()
