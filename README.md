@@ -68,22 +68,23 @@ See [DIAGNOSTICS.md](DIAGNOSTICS.md).
 
 ## Zelda Remastered HD Mod
 
-The cycle build uses the original USA PRG0 ROM for every presentation mode.
-Remastered is installed and selected through **Mods** in the same executable.
-Create a local package from your existing Mesen pack:
+Use your original USA PRG0 ROM for every mode. Open **Mods**, select **Zelda
+Remastered HD**, and use **Select file** to choose the original Mesen pack ZIP
+you downloaded. Enable the feature and click **Play**. The original outer
+download, a direct inner ZIP, or an extracted `hires.txt` is accepted; no
+Python, manual extraction or prepatched ROM is needed.
 
-```sh
-python tools/import_hdpack.py --pack "/path/to/pack" --rom "/path/to/Legend of Zelda.NES" --out "Zelda-Remastered.nesmod"
-```
+The bundled `.nesmod` is a content-free compatibility recipe. All textures,
+audio and IPS data come from your own download. The shared generic importer
+creates a private local cache, preserves creator notices, verifies the original
+ROM and applies the pack's IPS to an in-memory copy. Your source files stay
+unchanged. The original ZIP may be deleted after import. See
+[HD-PACKS.txt](HD-PACKS.txt) for setup and upgrade details.
 
-Install that archive in the launcher's Mods page, then enable **Zelda Remastered
-HD** before starting. It is disabled by default and shares an exclusion group
-with voxel views. The framework verifies the pack's IPS and applies it to an
-in-memory cartridge copy; your ROM stays unchanged. The included pack creator
-notice is preserved. Texture/background presentation uses the original PPU;
-replacement music and sound files remain unsupported. To return to stock,
-disable the feature in the launcher and restart. Pack/patch selection is
-read-only during gameplay, and save states require matching assets and options.
+HD is disabled by default and mutually exclusive with voxel views. Return to
+the launcher and restart to change the pack; disable HD to return to stock.
+Textures and backgrounds use the original PPU. Replacement music and sound
+files remain unsupported, along with the existing sampler limitations.
 
 ## Voxel 3D (experimental)
 
@@ -136,7 +137,8 @@ the stock ROM, saves, and launches with the feature disabled are unchanged.
 
 ## Building from Source
 
-Requires Visual Studio 2022 and CMake 3.20+.
+Requires Visual Studio 2022, CMake 3.20+ and Python 3.11+ to build. Downloaded
+releases do not require Python.
 
 ```bash
 git clone https://github.com/mstan/LegendOfZeldaNESRecomp

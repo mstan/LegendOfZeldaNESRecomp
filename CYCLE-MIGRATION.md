@@ -8,12 +8,12 @@ or third-party HD art is distributed.
 ```sh
 cmake -S . -B build-cycle -DNESRECOMP_ROM="/path/to/Legend of Zelda.NES"
 cmake --build build-cycle --config Release
-python tools/import_hdpack.py --pack "/path/to/pack" --rom "/path/to/Legend of Zelda.NES" --out "Zelda-Remastered.nesmod"
 ```
 
-Install the local archive through the launcher's **Mods** page, then enable
-**Zelda Remastered HD** before Play. NESRecomp's shared HD-pack Mod runtime
-verifies the original ROM, pack assets and optional IPS, applies the patch to
+Open **Zelda Remastered HD** in **Mods**, select the original pack download
+with **Select file**, and enable it before Play. The bundled content-free
+support recipe uses the shared Mesen importer; no Python or manual extraction
+is needed. NESRecomp verifies the original ROM, imported pack and IPS, applies the patch to
 an in-memory cartridge copy before power-on, and presents the pack through
 the real PPU's recorded fetch/pixel pipeline. The pack's creator notice is
 preserved. A separate patched ROM or HD executable is no longer needed for

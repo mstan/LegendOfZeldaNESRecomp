@@ -1,0 +1,25 @@
+Zelda Remastered and other Mesen HD packs
+
+Open Mods, select Zelda Remastered HD, and choose Select file under Mesen HD
+pack download. Choose the original ZIP you downloaded, enable the feature, and
+click Play. Use your original USA PRG0 Zelda ROM; do not pre-patch it.
+
+The shared importer handles the original outer download, a nested pack ZIP,
+or hires.txt from an extracted pack. No Python or manual conversion is needed.
+The support .nesmod contains integration rules only. All texture, audio and
+patch files come from your own download and are imported into a private local
+cache. Your download and original ROM remain unchanged. The original ZIP may
+be removed after a successful import; keep the imported files under mods/imports.
+
+Zelda Remastered HD Support is already installed and disabled by default.
+The separate Zelda-Remastered-Support.nesmod is the same content-free recipe;
+it requires v1.9.4 or later. Older locally converted packages can still work;
+select support version 2.0.0 in Mods to use the direct-download workflow.
+
+HD and Voxel display modes are mutually exclusive. Return to the launcher and
+restart to change the selected pack. Disable HD to return to stock graphics.
+Current HD support covers textures, layered backgrounds and the pack's IPS.
+Replacement music/SFX remain unsupported; the original NES audio is used.
+
+Pack creators' notices are retained in the local import. No Remastered art,
+audio, IPS, or game ROM is included in this game or in the support .nesmod.

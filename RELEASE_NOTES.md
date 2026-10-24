@@ -1,19 +1,7 @@
-# v1.9.1 — startup and crash diagnostics
+# v1.9.4 - import original Mesen downloads directly in Mods
 
-- Adds a bundled **Startup and Crash Diagnostics** mod, disabled by default.
-  Enable it in Mods before PLAY to record startup, host settings, renderer,
-  progress and exit details. Windows crashes attempt a matching minidump.
-- Capture begins when the mod is enabled, including the first PLAY handoff.
-  Persistent selections start capture before the launcher opens on later runs.
-- Displays error dialogs for game SDL initialization, window/renderer creation
-  and ROM-loading failures instead of silently returning to the desktop.
-- Retains matching release symbols in a separate download for dump analysis.
+Zelda Remastered HD now includes a content-free support .nesmod and a native general-purpose Mesen importer. In Mods, choose the original downloaded ZIP with Select file, enable the feature, and click Play. No Python, manual extraction, generated texture package or prepatched ROM is required.
 
-Share the newest `.log` and matching `.dmp`, if present, from `diagnostics`
-beside the executable. See DIAGNOSTICS.md for fallback storage and privacy.
-The reported v1.9.0 PLAY crash remains under investigation; this release adds
-evidence collection and does not claim to fix an unconfirmed cause.
+The .nesmod provides integration rules only. Creator textures, audio, IPS and ROM content are not shipped. The shared runtime discovers the user's pack, preserves its notices in a private cache, validates its original-ROM requirement and applies the user-supplied IPS in memory. The download and original ROM stay unchanged, and the ZIP can be removed after importing.
 
-The cycle backend, stock ROM requirement, existing voxel modes and HD Mods
-workflow are retained. No ROM, third-party HD art, settings or personal progress
-is included. Legacy binary save states still require the legacy backend.
+The importer handles direct ZIPs, pack directories inside ZIPs, nested wrapper downloads and extracted hires.txt files without game-specific archive names. Remastered textures/backgrounds and the existing optional voxel modes are retained. Replacement music and sound effects remain unsupported.
