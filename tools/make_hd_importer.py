@@ -14,6 +14,7 @@ def main():
     files = {
         'tools/import_hdpack.py': root / 'tools/import_hdpack.py',
         'tools/package_hdpack.py': args.framework / 'tools/package_hdpack.py',
+        'GENERIC-IMPORTER-README.txt': args.framework / 'tools/HD-IMPORTER-README.txt',
         'hdpatch/ZeldaRemasteredReadme.txt': root / 'hdpatch/ZeldaRemasteredReadme.txt',
         'README.txt': root / 'tools/HD-IMPORTER-README.txt',
         'LICENSE': root / 'LICENSE',

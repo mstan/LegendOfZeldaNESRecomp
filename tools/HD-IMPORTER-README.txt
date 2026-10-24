@@ -3,6 +3,9 @@ Zelda Remastered HD importer for LegendOfZeldaNESRecomp v1.9.2 and later
 Requires Python 3.11 or later. Extract this entire ZIP before running.
 Supply your own original Zelda USA PRG0 ROM and Zelda Remastered 1.3 pack.
 No ROM or third-party graphics/audio are included in this tool download.
+ZIP discovery and conversion use the shared general-purpose NESRecomp importer.
+The Zelda wrapper only supplies the game identity and creator attribution.
+See GENERIC-IMPORTER-README.txt for use with other games and Mesen packs.
 
 In a terminal opened in this extracted folder, run:
 
