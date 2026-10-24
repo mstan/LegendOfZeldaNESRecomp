@@ -2,10 +2,11 @@
    powershell -File tools\make_release.ps1 -Rom "F:\ROMs\Legend of Zelda.NES"
    powershell -File tools\make_release.ps1 -SkipBuild
 #>
-param([string]$Rom, [switch]$SkipBuild)
+param([string]$Rom, [switch]$SkipBuild, [string]$BuildDir,
+    [string]$ArchiveName = 'LegendOfZeldaNESRecomp-windows-x64.zip')
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
-$build = Join-Path $root 'build-cycle'
+$build = if ($BuildDir) { [IO.Path]::GetFullPath($BuildDir) } else { Join-Path $root 'build-cycle' }
 $bin = Join-Path $build 'Release'
 $out = Join-Path $root 'release'
 $cachePath = Join-Path $build 'CMakeCache.txt'
@@ -54,16 +55,20 @@ if (-not $SkipBuild) {
     $cache = Get-Content -LiteralPath $cachePath -Raw
 }
 if ((Get-CacheValue 'NESRECOMP_BACKEND') -ne 'cycle') { throw 'Refusing to package a legacy build.' }
+if ([IO.Path]::GetFileName($ArchiveName) -ne $ArchiveName -or -not $ArchiveName.EndsWith('.zip')) {
+    throw 'ArchiveName must be a ZIP filename without a directory.'
+}
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 $variants = @('LegendOfZeldaNESRecomp')
 foreach ($target in $variants) {
-    foreach ($dependency in "$target.exe", 'SDL2.dll', 'assets') {
+    foreach ($dependency in "$target.exe", 'SDL2.dll', 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'assets', "$target.pdb") {
         if (-not (Test-Path -LiteralPath (Join-Path $bin $dependency))) { throw "Missing release dependency: $dependency" }
     }
     $stage = Join-Path $out ('stage-' + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $stage | Out-Null
     try {
-        foreach ($file in "$target.exe", 'SDL2.dll') { Copy-Item -LiteralPath (Join-Path $bin $file) -Destination $stage }
+        Copy-Item -LiteralPath (Join-Path $bin "$target.exe") -Destination $stage
+        foreach ($file in Get-ChildItem -LiteralPath $bin -File -Filter '*.dll') { Copy-Item -LiteralPath $file.FullName -Destination $stage }
         Copy-Item -LiteralPath (Join-Path $bin 'assets') -Recurse -Destination (Join-Path $stage 'assets')
         Copy-Item -LiteralPath (Join-Path $root 'mods\preloaded') -Recurse -Destination (Join-Path $stage 'mods')
         New-Item -ItemType Directory -Path (Join-Path $stage 'tools') | Out-Null
@@ -72,16 +77,28 @@ foreach ($target in $variants) {
         $framework = Get-CacheValue 'NESRECOMP_ROOT'
         if (-not $framework) { $framework = Join-Path $root 'nesrecomp' }
         Copy-Item -LiteralPath (Join-Path $framework 'tools\package_hdpack.py') -Destination (Join-Path $stage 'tools')
+        Copy-Item -LiteralPath (Join-Path $framework 'tools\HD-IMPORTER-README.txt') -Destination (Join-Path $stage 'GENERIC-IMPORTER-README.txt')
         Copy-Item -LiteralPath (Join-Path $root 'hdpatch\ZeldaRemasteredReadme.txt') -Destination (Join-Path $stage 'hdpatch')
         Copy-Item -LiteralPath (Join-Path $root 'tools\HD-IMPORTER-README.txt') -Destination (Join-Path $stage 'HD-IMPORTER-README.txt')
         foreach ($doc in 'CYCLE-MIGRATION.md', 'RELEASE_NOTES.md', 'DIAGNOSTICS.md', 'LICENSE') { Copy-Item -LiteralPath (Join-Path $root $doc) -Destination $stage }
+        $licenses = @{
+            'Game-LICENSE.txt' = Join-Path $root 'LICENSE'
+            'NESRecomp-LICENSE.txt' = Join-Path $framework 'LICENSE'
+            'ImGui-LICENSE.txt' = Join-Path (Get-CacheValue 'RECOMP_UI_ROOT') 'src\third_party\imgui\LICENSE.txt'
+            'SDL2-COPYING.txt' = Join-Path (Get-CacheValue 'SDL2_DIR') '..\COPYING.txt'
+        }
+        New-Item -ItemType Directory -Path (Join-Path $stage 'licenses') | Out-Null
+        foreach ($name in $licenses.Keys) { Copy-Item -LiteralPath $licenses[$name] -Destination (Join-Path $stage "licenses\$name") }
         $readme = @'
-The Legend of Zelda - USA/NTSC cycle preview
+The Legend of Zelda - NESRecomp for Windows
 
 No ROM or third-party HD art is included. Select your stock USA PRG0 ROM,
 payload CRC32 3fe272fb, for every mode. Remastered is a modern Mod in the same
 executable. Make a local .nesmod from your existing pack and stock ROM with:
-python tools/import_hdpack.py --pack "path/to/pack" --rom "path/to/stock.nes" --out "Zelda-Remastered.nesmod"
+python tools/import_hdpack.py --pack "path/to/UnZipMeFirstZeldaRemasteredV1_3.zip" --rom "path/to/stock.nes" --out "Zelda-Remastered.nesmod"
+Python 3.11 or later is required. The complete general-purpose importer is
+included; see HD-IMPORTER-README.txt for setup and GENERIC-IMPORTER-README.txt
+for other Mesen packs. The original outer download can be used directly.
 Install it in Mods, then enable Zelda Remastered HD before Play. The shared
 framework verifies and applies its IPS in memory. Original files stay intact.
 Remastered replacement audio is not implemented; the original NES APU plays.
@@ -108,11 +125,13 @@ mod after testing. See DIAGNOSTICS.md for fallback storage and privacy details.
 '@
         [IO.File]::WriteAllText((Join-Path $stage 'README.txt'), $readme, [Text.Encoding]::UTF8)
         $forbidden = @(Get-ChildItem -LiteralPath $stage -File -Recurse | Where-Object {
-            $_.Extension -in '.nes', '.srm', '.sav', '.state', '.cycstate', '.log', '.dmp' -or
+            $_.Extension -in '.nes', '.fds', '.nesmod', '.srm', '.sav', '.state', '.cycstate', '.log', '.dmp' -or
             $_.Name -in 'config.ini', 'keybinds.ini', 'debug.ini', 'rom.cfg', 'state.toml', 'hires.txt'
         })
         if ($forbidden.Count) { throw 'Player/debug/third-party data found in staging.' }
-        $zip = Join-Path $out "$target-USA-NTSC-cycle-mods-preview-windows-x64.zip"
+        $loadingMods = @(Get-ChildItem -LiteralPath (Join-Path $stage 'mods') -File -Recurse | Select-String -Pattern 'psx\.enhancement\.(cd-speed|fast-loading)')
+        if ($loadingMods.Count) { throw 'Forbidden loading-speed feature found in staging.' }
+        $zip = Join-Path $out $ArchiveName
         if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip }
         Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip
         Write-Host "Created local preview: $zip"

@@ -72,9 +72,10 @@ The cycle build uses the original USA PRG0 ROM for every presentation mode.
 Remastered is installed and selected through **Mods** in the same executable.
 Create a local package from your existing Mesen pack:
 
-For release downloads, also extract the complete
-[`Zelda-Remastered-HD-Importer.zip`](https://github.com/mstan/LegendOfZeldaNESRecomp/releases/download/v1.9.2/Zelda-Remastered-HD-Importer.zip)
-into the game folder. Python 3.11 or later is required. The importer accepts
+The v1.9.3 Windows download includes the complete importer and instructions.
+For older builds, the standalone
+[`Zelda-Remastered-HD-Importer.zip`](https://github.com/mstan/LegendOfZeldaNESRecomp/releases/download/v1.9.3/Zelda-Remastered-HD-Importer.zip)
+can also be extracted into the game folder. Python 3.11 or later is required. The importer accepts
 the original `UnZipMeFirstZeldaRemasteredV1_3.zip` download directly, the inner
 `ZeldaRemastered.zip`, or an extracted folder containing `hires.txt`.
 ZIP discovery and conversion are provided by NESRecomp's shared,

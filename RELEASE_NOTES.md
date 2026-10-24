@@ -1,19 +1,7 @@
-# v1.9.1 — startup and crash diagnostics
+# v1.9.3 - complete Mesen HD pack importer
 
-- Adds a bundled **Startup and Crash Diagnostics** mod, disabled by default.
-  Enable it in Mods before PLAY to record startup, host settings, renderer,
-  progress and exit details. Windows crashes attempt a matching minidump.
-- Capture begins when the mod is enabled, including the first PLAY handoff.
-  Persistent selections start capture before the launcher opens on later runs.
-- Displays error dialogs for game SDL initialization, window/renderer creation
-  and ROM-loading failures instead of silently returning to the desktop.
-- Retains matching release symbols in a separate download for dump analysis.
+The Windows download now includes the complete shared Mesen HD importer and setup instructions. The importer accepts folders, direct pack ZIPs, and outer downloads containing a nested pack ZIP, including the original Zelda Remastered 1.3 download. Zelda's wrapper supplies the game identity and creator attribution; pack discovery and conversion are general-purpose framework tools.
 
-Share the newest `.log` and matching `.dmp`, if present, from `diagnostics`
-beside the executable. See DIAGNOSTICS.md for fallback storage and privacy.
-The reported v1.9.0 PLAY crash remains under investigation; this release adds
-evidence collection and does not claim to fix an unconfirmed cause.
+Create a local .nesmod using your own original USA PRG0 ROM and pack, then install it in Mods and enable Zelda Remastered HD before Play. Python 3.11 or later is required for importing. Your ROM stays unchanged and no ROM or third-party graphics/audio are included in the release.
 
-The cycle backend, stock ROM requirement, existing voxel modes and HD Mods
-workflow are retained. No ROM, third-party HD art, settings or personal progress
-is included. Legacy binary save states still require the legacy backend.
+The Windows archive includes its compiler runtime dependencies, licenses and matching symbols as a separate download. The native engine and renderer remain on the previously validated v1.9.2 runtime pin, with a tools-only importer update. Replacement music/SFX and the existing sampler limitations remain unsupported as documented.
