@@ -61,7 +61,7 @@ if ([IO.Path]::GetFileName($ArchiveName) -ne $ArchiveName -or -not $ArchiveName.
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 $variants = @('LegendOfZeldaNESRecomp')
 foreach ($target in $variants) {
-    foreach ($dependency in "$target.exe", 'SDL2.dll', 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'assets', "$target.pdb") {
+    foreach ($dependency in "$target.exe", 'SDL2.dll', 'msvcp140.dll', 'vcruntime140.dll', 'vcruntime140_1.dll', 'assets', "$target.pdb", 'Zelda-Remastered-Support.nesmod') {
         if (-not (Test-Path -LiteralPath (Join-Path $bin $dependency))) { throw "Missing release dependency: $dependency" }
     }
     $stage = Join-Path $out ('stage-' + [guid]::NewGuid().ToString('N'))
@@ -71,15 +71,20 @@ foreach ($target in $variants) {
         foreach ($file in Get-ChildItem -LiteralPath $bin -File -Filter '*.dll') { Copy-Item -LiteralPath $file.FullName -Destination $stage }
         Copy-Item -LiteralPath (Join-Path $bin 'assets') -Recurse -Destination (Join-Path $stage 'assets')
         Copy-Item -LiteralPath (Join-Path $root 'mods\preloaded') -Recurse -Destination (Join-Path $stage 'mods')
-        New-Item -ItemType Directory -Path (Join-Path $stage 'tools') | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $stage 'hdpatch') | Out-Null
-        Copy-Item -LiteralPath (Join-Path $root 'tools\import_hdpack.py') -Destination (Join-Path $stage 'tools')
         $framework = Get-CacheValue 'NESRECOMP_ROOT'
         if (-not $framework) { $framework = Join-Path $root 'nesrecomp' }
-        Copy-Item -LiteralPath (Join-Path $framework 'tools\package_hdpack.py') -Destination (Join-Path $stage 'tools')
-        Copy-Item -LiteralPath (Join-Path $framework 'tools\HD-IMPORTER-README.txt') -Destination (Join-Path $stage 'GENERIC-IMPORTER-README.txt')
-        Copy-Item -LiteralPath (Join-Path $root 'hdpatch\ZeldaRemasteredReadme.txt') -Destination (Join-Path $stage 'hdpatch')
-        Copy-Item -LiteralPath (Join-Path $root 'tools\HD-IMPORTER-README.txt') -Destination (Join-Path $stage 'HD-IMPORTER-README.txt')
+        Add-Type -AssemblyName System.IO.Compression.FileSystem
+        $support = Join-Path $bin 'Zelda-Remastered-Support.nesmod'
+        $recipe = [IO.Compression.ZipFile]::OpenRead($support)
+        try {
+            if ($recipe.Entries.Count -ne 1 -or $recipe.Entries[0].FullName -ne 'manifest.toml') { throw 'Support nesmod must contain integration metadata only.' }
+            $reader = New-Object IO.StreamReader($recipe.Entries[0].Open())
+            try { $manifest = $reader.ReadToEnd() } finally { $reader.Dispose() }
+            $expected = [IO.File]::ReadAllText((Join-Path $root 'mods\preloaded\packages\legend-of-zelda.remastered\2.0.0\manifest.toml'))
+            if ($manifest -ne $expected) { throw 'Support nesmod does not match the source recipe.' }
+        } finally { $recipe.Dispose() }
+        Copy-Item -LiteralPath $support -Destination $stage
+        Copy-Item -LiteralPath (Join-Path $root 'HD-PACKS.txt') -Destination $stage
         foreach ($doc in 'CYCLE-MIGRATION.md', 'RELEASE_NOTES.md', 'DIAGNOSTICS.md', 'LICENSE') { Copy-Item -LiteralPath (Join-Path $root $doc) -Destination $stage }
         $licenses = @{
             'Game-LICENSE.txt' = Join-Path $root 'LICENSE'
@@ -92,16 +97,15 @@ foreach ($target in $variants) {
         $readme = @'
 The Legend of Zelda - NESRecomp for Windows
 
-No ROM or third-party HD art is included. Select your stock USA PRG0 ROM,
-payload CRC32 3fe272fb, for every mode. Remastered is a modern Mod in the same
-executable. Make a local .nesmod from your existing pack and stock ROM with:
-python tools/import_hdpack.py --pack "path/to/UnZipMeFirstZeldaRemasteredV1_3.zip" --rom "path/to/stock.nes" --out "Zelda-Remastered.nesmod"
-Python 3.11 or later is required. The complete general-purpose importer is
-included; see HD-IMPORTER-README.txt for setup and GENERIC-IMPORTER-README.txt
-for other Mesen packs. The original outer download can be used directly.
-Install it in Mods, then enable Zelda Remastered HD before Play. The shared
-framework verifies and applies its IPS in memory. Original files stay intact.
-Remastered replacement audio is not implemented; the original NES APU plays.
+Select your original USA PRG0 Zelda ROM. To use Remastered, open Mods, select
+Zelda Remastered HD, and use Select file to choose the original pack ZIP you
+downloaded. Enable the feature and click Play. No Python or manual conversion
+is needed; see HD-PACKS.txt. The support mod is already installed, default-off.
+The .nesmod contains compatibility rules only. No ROM or Remastered texture,
+audio or IPS content is shipped. The shared importer handles your own download
+and applies its patch in memory; your original files stay unchanged. Imported
+content stays in mods/imports. Replacement audio is not implemented; the
+original NES APU plays.
 
 Arrow keys: D-pad. Z: A. X: B. Enter: Start. Backslash: Select.
 Escape: menu/settings. Hold Tab: fast-forward. F8/F9: cycle save/load state.
@@ -125,7 +129,8 @@ mod after testing. See DIAGNOSTICS.md for fallback storage and privacy details.
 '@
         [IO.File]::WriteAllText((Join-Path $stage 'README.txt'), $readme, [Text.Encoding]::UTF8)
         $forbidden = @(Get-ChildItem -LiteralPath $stage -File -Recurse | Where-Object {
-            $_.Extension -in '.nes', '.fds', '.nesmod', '.srm', '.sav', '.state', '.cycstate', '.log', '.dmp' -or
+            $_.Extension -in '.nes', '.fds', '.ips', '.ogg', '.srm', '.sav', '.state', '.cycstate', '.log', '.dmp' -or
+            ($_.Extension -eq '.nesmod' -and $_.Name -ne 'Zelda-Remastered-Support.nesmod') -or
             $_.Name -in 'config.ini', 'keybinds.ini', 'debug.ini', 'rom.cfg', 'state.toml', 'hires.txt'
         })
         if ($forbidden.Count) { throw 'Player/debug/third-party data found in staging.' }

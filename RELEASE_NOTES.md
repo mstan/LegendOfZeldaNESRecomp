@@ -1,7 +1,7 @@
-# v1.9.3 - complete Mesen HD pack importer
+# v1.9.4 - import original Mesen downloads directly in Mods
 
-The Windows download now includes the complete shared Mesen HD importer and setup instructions. The importer accepts folders, direct pack ZIPs, and outer downloads containing a nested pack ZIP, including the original Zelda Remastered 1.3 download. Zelda's wrapper supplies the game identity and creator attribution; pack discovery and conversion are general-purpose framework tools.
+Zelda Remastered HD now includes a content-free support .nesmod and a native general-purpose Mesen importer. In Mods, choose the original downloaded ZIP with Select file, enable the feature, and click Play. No Python, manual extraction, generated texture package or prepatched ROM is required.
 
-Create a local .nesmod using your own original USA PRG0 ROM and pack, then install it in Mods and enable Zelda Remastered HD before Play. Python 3.11 or later is required for importing. Your ROM stays unchanged and no ROM or third-party graphics/audio are included in the release.
+The .nesmod provides integration rules only. Creator textures, audio, IPS and ROM content are not shipped. The shared runtime discovers the user's pack, preserves its notices in a private cache, validates its original-ROM requirement and applies the user-supplied IPS in memory. The download and original ROM stay unchanged, and the ZIP can be removed after importing.
 
-The Windows archive includes its compiler runtime dependencies, licenses and matching symbols as a separate download. The native engine and renderer remain on the previously validated v1.9.2 runtime pin, with a tools-only importer update. Replacement music/SFX and the existing sampler limitations remain unsupported as documented.
+The importer handles direct ZIPs, pack directories inside ZIPs, nested wrapper downloads and extracted hires.txt files without game-specific archive names. Remastered textures/backgrounds and the existing optional voxel modes are retained. Replacement music and sound effects remain unsupported.

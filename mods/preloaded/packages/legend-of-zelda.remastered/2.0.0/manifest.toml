@@ -1,0 +1,28 @@
+format_version = 1
+id = "legend-of-zelda.remastered"
+version = "2.0.0"
+name = "Zelda Remastered HD Support"
+author = "NESRecomp"
+description = "Compatibility recipe for the player's Zelda Remastered download. Original pack by Aclectico, KYA and contributors; no pack content is included."
+license = "PolyForm-Noncommercial-1.0.0 (integration metadata only)"
+resolver = "declarative"
+
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "3fe272fb"
+
+[[feature]]
+id = "hd-pack"
+name = "Zelda Remastered HD"
+description = "Select your original Mesen pack download below. Its textures and IPS patch are imported and applied locally."
+group = "Display"
+default_enabled = false
+exclusive_group = "display-mode"
+
+[[hd_pack]]
+feature = "hd-pack"
+source = "mesen"
+resource_id = "source-pack"
+label = "Mesen HD pack download"
+description = "Select the original downloaded ZIP directly. You can also select an inner pack ZIP or hires.txt from an extracted pack."
+require_patch = true

@@ -43,7 +43,7 @@ if(NESRECOMP_BACKEND STREQUAL "cycle")
         target_compile_definitions(${TARGET} PRIVATE ZELDA_CYCLE NESRECOMP_CYCLE_PRESENTATION)
         set(ZELDA_BUILD_REVISION "development" CACHE STRING "Source revision for diagnostic logs")
         target_compile_definitions(${TARGET} PRIVATE
-            CYC_BUILD_VERSION="1.9.3" CYC_BUILD_REVISION="${ZELDA_BUILD_REVISION}")
+            CYC_BUILD_VERSION="1.9.4" CYC_BUILD_REVISION="${ZELDA_BUILD_REVISION}")
         if(MSVC)
             # Keep an optimized release while retaining its matching crash symbols.
             target_compile_options(${TARGET} PRIVATE /Zi)
@@ -52,6 +52,13 @@ if(NESRECOMP_BACKEND STREQUAL "cycle")
         add_custom_command(TARGET ${TARGET} POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_directory
                 "${CMAKE_CURRENT_SOURCE_DIR}/mods/preloaded" "$<TARGET_FILE_DIR:${TARGET}>/mods")
+        find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
+        add_custom_command(TARGET ${TARGET} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E rm -f "$<TARGET_FILE_DIR:${TARGET}>/Zelda-Remastered-Support.nesmod"
+            COMMAND "${Python3_EXECUTABLE}" "${NESRECOMP_ROOT}/tools/package_recipe.py"
+                --manifest "${CMAKE_CURRENT_SOURCE_DIR}/mods/preloaded/packages/legend-of-zelda.remastered/2.0.0/manifest.toml"
+                --out "$<TARGET_FILE_DIR:${TARGET}>/Zelda-Remastered-Support.nesmod"
+            VERBATIM)
     endfunction()
     add_zelda_cycle(LegendOfZeldaNESRecomp stock "${NESRECOMP_ROM}")
     return()
