@@ -35,12 +35,12 @@ only to `NESRECOMP_BACKEND=legacy`:
 
 ```
 python tools/apply_hd_patch.py --rom <your zelda.nes> --out build/zelda_hd.nes
-NESRecomp.exe build/zelda_hd.nes --game game.toml      # regen from the patched ROM
+NESRecomp.exe build/zelda_hd.nes --game config/legacy/game.toml  # regen from the patched ROM
 cmake -S . -B build-legacy -DNESRECOMP_BACKEND=legacy
 cmake --build build-legacy --target LegendOfZeldaNESRecomp-HD
 ```
 
 The recompiled code is baked from the patched ROM and the runner reads PRG data
 from the loaded ROM at runtime, so the HD build **expects the patched ROM**
-(`extras.c` `game_get_expected_crc32` is the patched CRC `0xFD9C577F`). Drop the
+(`src/extras.c` `game_get_expected_crc32` is the patched CRC `0xFD9C577F`). Drop the
 HD pack into `hdpack/` and the launcher's HD toggle (default-on) will load it.

@@ -35,17 +35,17 @@ if(NESRECOMP_BACKEND STREQUAL "cycle")
     include("${NESRECOMP_ROOT}/runner/cyc/project.cmake")
     function(add_zelda_cycle TARGET VARIANT ROM)
         nesrecomp_add_cycle_game(${TARGET}
-            ROM "${ROM}" GAME_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/game-cycle-${VARIANT}.toml"
-            RECOMPILER "${NESRECOMP_HOST_COMPILER}" SEED_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cyc_seeds_${VARIANT}.txt"
-            CAPTURE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cyc_captures_${VARIANT}.txt"
+            ROM "${ROM}" GAME_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/config/cycle/game-cycle-${VARIANT}.toml"
+            RECOMPILER "${NESRECOMP_HOST_COMPILER}" SEED_FILE "${CMAKE_CURRENT_SOURCE_DIR}/config/cycle/cyc_seeds_${VARIANT}.txt"
+            CAPTURE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/config/cycle/cyc_captures_${VARIANT}.txt"
             MODS HD_PACKS GAME_ID "legend-of-zelda-us" PLAYERS 1 REGION NTSC
-            BOXART "${CMAKE_CURRENT_SOURCE_DIR}/boxart.tga"
-            HOST_EXTRAS cyc_extras.c zelda_voxel.c zelda_world.c zelda_world_rooms.c mods/zelda_voxel_plugin.c
+            BOXART "${CMAKE_CURRENT_SOURCE_DIR}/assets/boxart.tga"
+            HOST_EXTRAS src/cyc_extras.c src/zelda_voxel.c src/zelda_world.c src/zelda_world_rooms.c src/zelda_voxel_plugin.c
                 "${NESRECOMP_ROOT}/runner/cyc/cyc_presentation.c"
                 "${NESRECOMP_ROOT}/runner/src/voxel_renderer.c"
                 "${NESRECOMP_ROOT}/runner/src/voxel_screen_profile.c"
                 "${NESRECOMP_ROOT}/runner/src/keybinds.c")
-        target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
+        target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
         target_compile_definitions(${TARGET} PRIVATE ZELDA_CYCLE NESRECOMP_CYCLE_PRESENTATION)
         if(MSVC)
             # Keep an optimized release while retaining its matching crash symbols.
@@ -68,13 +68,13 @@ list(APPEND CMAKE_PREFIX_PATH "${NESRECOMP_ROOT}/runner/external/SDL2/cmake")
 find_package(SDL2 REQUIRED)
 
 # ---- Pre-boot GUI launcher (recomp-ui / Dear ImGui) ----
-# recomp-ui/ is a directory junction -> the shared recomp-ui checkout. Its module
+# recomp-ui/ is the pinned shared launcher submodule. Its module
 # defines recomp_target_launcher_ui() (RECOMP_LAUNCHER on the target, staging the
 # launcher assets); called once per game variant below.
 include(${RECOMP_UI_ROOT}/recomp_ui.cmake)
 
 # ---- Game variants: stock + HD (two builds from one project) ----
-# See _zelda_release.bat / the "Cutting a release" section in CLAUDE.md.
+# Legacy reference only; current cycle releases use tools/make_release.ps1.
 #   LegendOfZeldaNESRecomp      (default) — recompiled from STOCK zelda.nes: pure
 #       stock game, no Remastered enhancements; the launcher hides the HD-pack
 #       panel and the runtime never loads a pack (NESRECOMP_GAME_NO_HDPACK).
@@ -92,12 +92,12 @@ function(add_zelda_variant TARGET GEN_PREFIX IS_STOCK)
     endif()
     add_executable(${TARGET}
         ${NESRECOMP_RUNNER_SOURCES}
-        extras.c
-        zelda_voxel.c
-        mods/zelda_voxel_plugin.c
-        nes_snapshot.c
-        verify_mode.c
-        watchdog.c
+        src/extras.c
+        src/zelda_voxel.c
+        src/zelda_voxel_plugin.c
+        src/nes_snapshot.c
+        src/verify_mode.c
+        src/watchdog.c
         ${GENERATED_ROOT}/${GEN_PREFIX}_full.c
         ${GENERATED_ROOT}/${GEN_PREFIX}_dispatch.c
     )
@@ -125,14 +125,14 @@ function(add_zelda_variant TARGET GEN_PREFIX IS_STOCK)
 
     target_include_directories(${TARGET} PRIVATE
         ${NESRECOMP_RUNNER_INCLUDE_DIRS}
-        ${CMAKE_SOURCE_DIR}
+        ${CMAKE_SOURCE_DIR}/src
         ${SDL2_INCLUDE_DIRS}
     )
 
     target_link_libraries(${TARGET} PRIVATE ${SDL2_LIBRARIES})
     recomp_target_launcher_ui(${TARGET}
         CONSOLE nes
-        BOXART ${CMAKE_SOURCE_DIR}/boxart.tga)
+        BOXART ${CMAKE_SOURCE_DIR}/assets/boxart.tga)
 
     # Ship built-in packages through the same on-disk catalog used for
     # user-installed .nesmod archives. copy_directory is additive, so a rebuild

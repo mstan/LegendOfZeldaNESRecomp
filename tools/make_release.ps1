@@ -77,9 +77,11 @@ foreach ($target in $variants) {
         if (-not $framework) { $framework = Join-Path $root 'nesrecomp' }
         Copy-Item -LiteralPath (Join-Path $framework 'tools\package_hdpack.py') -Destination (Join-Path $stage 'tools')
         Copy-Item -LiteralPath (Join-Path $root 'hdpatch\ZeldaRemasteredReadme.txt') -Destination (Join-Path $stage 'hdpatch')
-        foreach ($doc in 'README.md', 'CYCLE-MIGRATION.md', 'RELEASE_NOTES.md', 'DIAGNOSTICS.md', 'LICENSE') { Copy-Item -LiteralPath (Join-Path $root $doc) -Destination $stage }
+        foreach ($doc in 'README.md', 'LICENSE') { Copy-Item -LiteralPath (Join-Path $root $doc) -Destination $stage }
         New-Item -ItemType Directory -Path (Join-Path $stage 'docs\assets') | Out-Null
-        Copy-Item -LiteralPath (Join-Path $root 'docs\SEAMLESS-WORLD.md') -Destination (Join-Path $stage 'docs')
+        foreach ($doc in 'CYCLE-MIGRATION.md', 'RELEASE_NOTES.md', 'DIAGNOSTICS.md', 'SEAMLESS-WORLD.md') {
+            Copy-Item -LiteralPath (Join-Path $root "docs\$doc") -Destination (Join-Path $stage 'docs')
+        }
         foreach ($image in 'seamless-overworld.png', 'seamless-dungeon.png', 'seamless-atlas.png', 'voxel-3d.webp') {
             Copy-Item -LiteralPath (Join-Path $root "docs\assets\$image") -Destination (Join-Path $stage 'docs\assets')
         }
@@ -130,13 +132,13 @@ exclusive. Numpad 0 toggles the view; 8/2 pitch, 4/6 yaw, 7/9 roll, +/- zoom,
 1/3 sprite scale and 5 resets the camera. First-person movement follows the
 camera; the right stick looks. HD is mutually exclusive with voxel views. Disable HD in the launcher and
 restart to return to stock. Save states require matching pack assets/patch.
-These builds are development previews. Read CYCLE-MIGRATION.md for coverage
+These builds are development previews. Read docs/CYCLE-MIGRATION.md for coverage
 and existing presentation limitations.
 
 For a startup crash: open Mods and enable Startup and Crash Diagnostics,
 then click PLAY and reproduce the issue. Share the newest .log and matching
 .dmp, if present, from the diagnostics folder beside the program. Disable the
-mod after testing. See DIAGNOSTICS.md for fallback storage and privacy details.
+mod after testing. See docs/DIAGNOSTICS.md for fallback storage and privacy details.
 '@
         [IO.File]::WriteAllText((Join-Path $stage 'README.txt'), $readme, [Text.Encoding]::UTF8)
         $forbidden = @(Get-ChildItem -LiteralPath $stage -File -Recurse | Where-Object {

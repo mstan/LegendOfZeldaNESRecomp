@@ -11,7 +11,7 @@ The default source build produces one `LegendOfZeldaNESRecomp.exe` from the
 original USA PRG0 ROM (payload CRC32 `3fe272fb`). Remastered HD is a modern
 Mod installed through the shared NESRecomp HD-pack importer; its verified IPS
 is applied in memory. Voxel diorama and first-person are optional experimental
-Mods. Use `README.md` and `CYCLE-MIGRATION.md` for the current workflows.
+Mods. Use `README.md` and `docs/CYCLE-MIGRATION.md` for the current workflows.
 
 Build/package with `powershell -File tools\make_release.ps1 -Rom "stock.nes"`.
 The ZIP includes SDL, launcher assets and pristine default-off Mod packages;
@@ -19,6 +19,13 @@ it omits ROMs, personal saves/settings and third-party HD art. Cycle controls
 and saves differ from the retained explicit `NESRECOMP_BACKEND=legacy` host.
 The older separate stock/HD target instructions and `tools/voxel_smoke.py`
 belong to that legacy workflow.
+
+Game C sources and headers live in `src/`, cycle compiler inputs in
+`config/cycle/`, and retained legacy compiler inputs in `config/legacy/`.
+Supporting documentation lives in `docs/`; discovery reports are historical
+reference in `docs/reference/`. Windows release entrypoints are
+`tools/make_release.ps1` and `tools/release.bat`. Keep generated outputs,
+captures and local scratch in ignored build/evidence directories.
 
 For cycle debugging use `--tcp <port>` and the cycle JSON commands documented
 in the framework. The legacy `debug.ini` protocol below is retained reference.

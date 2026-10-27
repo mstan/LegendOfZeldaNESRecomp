@@ -69,9 +69,9 @@ function findRom(): string | null {
 }
 
 function findToml(): string {
-  const toml = join(GAME_ROOT, "game.toml");
+  const toml = join(GAME_ROOT, "config/legacy/game.toml");
   if (existsSync(toml)) return toml;
-  throw new Error(`game.toml not found in ${GAME_ROOT}`);
+  throw new Error(`Legacy compiler configuration not found: ${toml}`);
 }
 
 function findSln(): string {

@@ -39,7 +39,7 @@ on the adaptive canvas. Original portal timing and puzzle routing remain.
 
 ## Implementation
 
-`zelda_world.c` owns the adaptive camera and cached room rasterization.
+`src/zelda_world.c` owns the adaptive camera and cached room rasterization.
 `zelda_world_rooms.c` owns persistent room state, activation, native-routine ticks,
 collision lookahead and seam handoffs. Content-qualified hooks target the original
 USA PRG0 routines. The ROM's payload CRC32 must be `3fe272fb`.

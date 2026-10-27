@@ -36,3 +36,8 @@ diagnostics/
 *.dmp
 __pycache__/
 release/
+release-*/
+build-*/
+
+# Machine-local logs, reports and archived build helpers
+/local/

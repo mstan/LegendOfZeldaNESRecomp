@@ -70,7 +70,7 @@ static void get_exe_relative_path(const char *filename, char *out, int max_len) 
 
 /* ---- game_extras.h implementation ---- */
 
-/* Two builds (see CMakeLists.txt + _zelda_release.bat):
+/* Legacy backend's two builds (see CMakeLists.txt):
  *   - STOCK build (NESRECOMP_GAME_NO_HDPACK defined): recompiled from a clean
  *     PRG0 ROM, byte-identical stock Zelda, no enhancements, HD packs disabled.
  *   - HD build (default): recompiled from the "Zelda Remastered" patched ROM

@@ -12,7 +12,7 @@
 Static recompilation of The Legend of Zelda (NES) for native PC.
 Built with the [NESRecomp](https://github.com/mstan/nesrecomp) framework.
 
-> **Cycle migration preview:** the cycle CPU is now the default source build, with the legacy backend still available. The earlier legacy build was tested through dungeon 7. Current cycle checks cover startup, an overworld route, save/replay and presentation modes; a new full-game audit is pending. See [CYCLE-MIGRATION.md](CYCLE-MIGRATION.md).
+> **Cycle migration preview:** the cycle CPU is now the default source build, with the legacy backend still available. The earlier legacy build was tested through dungeon 7. Current cycle checks cover startup, an overworld route, save/replay and presentation modes; a new full-game audit is pending. See [cycle migration notes](docs/CYCLE-MIGRATION.md).
 
 ## Acknowledgments
 
@@ -73,7 +73,7 @@ claim. See [implementation and validation notes](docs/SEAMLESS-WORLD.md).
 For silent startup failures, enable **Startup and Crash Diagnostics** in
 **Mods** before PLAY, then share the newest log and any matching Windows
 minidump from `diagnostics` beside the program. This mod is disabled by default.
-See [DIAGNOSTICS.md](DIAGNOSTICS.md).
+See [diagnostic instructions](docs/DIAGNOSTICS.md).
 
 | NES Button | Keyboard |
 |------------|----------|
@@ -194,17 +194,21 @@ cmake -S . -B build-cycle -G "Visual Studio 17 2022" -A x64 -DNESRECOMP_ROM="F:/
 cmake --build build-cycle --config Release
 ```
 
-Choose the same USA PRG0 ROM at runtime. Remastered uses the Mods importer above. For an explicit legacy build, see [CYCLE-MIGRATION.md](CYCLE-MIGRATION.md).
+Choose the same USA PRG0 ROM at runtime. Remastered uses the Mods importer above. For an explicit legacy build, see [cycle migration notes](docs/CYCLE-MIGRATION.md).
 
 ## Architecture
 
 The original 6502 code is translated to cycle-aware C and compiled to native code. Unprofiled code and cartridge work-RAM code safely use the cycle interpreter. The PPU, APU and mapper advance with the guest CPU.
 
-- `game-cycle-stock.toml` — default cycle target configuration
+- `config/cycle/` — default cycle configuration, seeds and capture inputs
+- `config/legacy/` — retained legacy compiler configuration and disassembly symbols
+- `src/` — game integration, presentation, diagnostics and mod plugins
+- `assets/` — launcher box art
+- `docs/` — controls, release notes, diagnostics and implementation notes; historical discovery evidence is in `docs/reference/`
+- `tools/make_release.ps1` (or `tools/release.bat`) — Windows release packaging
 - `tools/import_hdpack.py` — shared framework HD-pack package importer with Zelda attribution
-- `cyc_extras.c` / `cycle_bridge.h` — cycle presentation, input and diagnostics adapter
-- `game.cfg` / `extras.c` — retained legacy configuration and hooks
-- `zelda_voxel.c` — Zelda tile-height profile and 3D view controls
+- `src/cyc_extras.c` / `src/cycle_bridge.h` — cycle presentation, input and diagnostics adapter
+- `src/zelda_voxel.c` — Zelda tile-height profile and 3D view controls
 - `build-cycle/cycle-*` — generated cycle code (do not edit manually)
 - `generated/` — retained legacy generated inputs
 - `nesrecomp/` — framework submodule (recompiler + runner)
