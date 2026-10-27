@@ -49,6 +49,8 @@ static double step_us[TIMING_COUNT],render_us[TIMING_COUNT];
 static unsigned step_count,render_count;
 static double handoff_max_us;
 static uint64_t timing_cycle=UINT64_MAX;
+static uint8_t frame_mask;
+static bool death_view;
 static void drawable_size(void) {
     int w,h;cyc_video_drawable_size(&w,&h);
     if(w>0&&h>0){draw_w=w;draw_h=h;}
@@ -194,7 +196,7 @@ static unsigned terrain_index(int wx,int wy) {
                    (((cyc_render_chr((uint16_t)(pattern+8))>>shift)&1)<<1);
     return color?palette*4+color:0;
 }
-static void prepare_rasters(void) {
+static void prepare_rasters(int w,int h) {
     uint8_t now[4096];for(unsigned i=0;i<4096;i++)now[i]=cyc_render_chr((uint16_t)(0x1000+i));
     if(!patterns_valid||memcmp(now,patterns,sizeof now)) {
         memcpy(patterns,now,sizeof patterns);patterns_valid=true;memset(raster_valid,0,sizeof raster_valid);
@@ -203,9 +205,14 @@ static void prepare_rasters(void) {
     }
     for(unsigned id=0;id<128;id++) {
         WorldRoom *r=&rooms[id];if(!r->valid||!r->owned)continue;
-        uint8_t colors[16];memcpy(colors,r->palette,16);
+        int rx=(int)(id&15)*256,ry=(int)(id>>4)*176;
+        if(rx+256<=camera_x||rx>=camera_x+w||ry+176<=camera_y||ry>=camera_y+h-HUD_H)continue;
+        uint8_t colors[16];memcpy(colors,death_view?cyc_ppu_palette():r->palette,16);
+        if(death_view&&cyc_mod_peek(0x11)&&cyc_mod_peek(0x13)>=6)
+            for(unsigned i=1;i<16;i++)colors[i]=cyc_ppu_palette()[12+(i&3)];
         bool dark=cyc_mod_peek(0x10)!=0&&(cyc_mod_peek((uint16_t)(0x6a7e + id))&0x80)!=0;
         if(dark && (!r->simulation_ready||!r->ram[0x51f]))memset(colors,0x0f,sizeof colors);
+        if(frame_mask&1)for(unsigned i=0;i<16;i++)colors[i]&=0x30;
         bool changed=!raster_valid[id]||memcmp(raster_tiles[id],r->tiles,TILES)||memcmp(raster_attrs[id],r->attrs,48);
         if(changed) {
             memcpy(raster_tiles[id],r->tiles,TILES);memcpy(raster_attrs[id],r->attrs,48);
@@ -228,11 +235,12 @@ static void prepare_rasters(void) {
 static void draw_actors(unsigned id,int w,int h) {
     const WorldRoom *r=&rooms[id];if(!r->simulation_ready)return;
     int ox=(int)(id&15)*256-camera_x,oy=HUD_H+(int)(id>>4)*176-camera_y-HUD_H;
+    if(ox+272<=0||ox>=w+16||oy+256<=HUD_H||oy>=h+16)return;
     bool active=id==cyc_mod_peek(0xeb);
     for(int slot=63;slot>=18;slot--) {
         if(slot>=20&&slot<=23)continue; /* HUD icons already drawn once. */
         if(!active&&(slot==18||slot==19))continue;
-        const uint8_t *o=r->ram+0x200+slot*4;
+        const uint8_t *o=(death_view&&active?cyc_cpu_ram():r->ram)+0x200+slot*4;
         if(o[0]>=0xf8)continue;
         if(o[0]==31&&slot!=18&&slot!=19)continue; /* Allocated HUD item sprites. */
         int sx=o[3],sy=o[0]+1;
@@ -248,17 +256,26 @@ static void draw_actors(unsigned id,int w,int h) {
             unsigned v=((cyc_render_chr((uint16_t)a)>>px)&1)|(((cyc_render_chr((uint16_t)(a+8))>>px)&1)<<1);
             if(!v)continue;
             if((attr&0x20)&&(terrain_index(camera_x+dx,camera_y+dy-HUD_H)&3))continue;
-            unsigned color=r->palette[16+(attr&3)*4+v]&63;
+            unsigned color=(death_view?cyc_ppu_palette():r->palette)[16+(attr&3)*4+v]&63;
+            if(frame_mask&1)color&=0x30;
             canvas[(size_t)dy*w+dx]=g_nes_palette[color];
         }
     }
 }
+static void native_page(const uint32_t *native,int w,int h) {
+    for(size_t i=0;i<(size_t)w*h;i++)canvas[i]=native[0];
+    int ox=(w-256)/2,oy=(h-240)/2;
+    for(int y=0;y<240;y++)if(oy+y>=0&&oy+y<h)
+        for(int x=0;x<256;x++)if(ox+x>=0&&ox+x<w)
+            canvas[(size_t)(oy+y)*w+ox+x]=native[y*256+x];
+}
 const uint32_t *zelda_world_present(int *width,int *height) {
-    if(!mode || cyc_mod_peek(0x12)!=5 ||
-       cyc_mod_peek(0xe1)!=0 || !zelda_world_supported())return NULL;
+    unsigned game_mode=cyc_mod_peek(0x12);
+    if(!mode || !zelda_world_supported() ||
+       (game_mode!=5&&game_mode!=0x11&&cached_level<0))return NULL;
     uint64_t started=SDL_GetPerformanceCounter();
+    frame_mask=cyc_render_line_mask(64);death_view=game_mode==0x11;
     drawable_size();
-    zelda_world_refresh();
     int w=fixed_w?fixed_w:clamp(draw_w/zoom,128,4096);
     int h=fixed_h?fixed_h:clamp(draw_h/zoom,128,2048);
     if(mode==2||atlas_view){w=WORLD_W;h=WORLD_H+HUD_H;}
@@ -268,6 +285,13 @@ const uint32_t *zelda_world_present(int *width,int *height) {
         if(!next)return NULL;
         canvas=next;canvas_capacity=count;
     }
+    const uint32_t *native=cyc_frame_argb();
+    if(game_mode!=5&&game_mode!=0x11) {
+        /* Keep the viewport through Continue, restart/load and portal pages.
+         * These pages retain their native UI, centered on a full backdrop. */
+        native_page(native,w,h);goto complete;
+    }
+    zelda_world_refresh();
     unsigned room=cyc_mod_peek(0xeb);
     int room_x=(room&15)*ROOM_W,room_y=(room>>4)*ROOM_H;
     camera_x=(mode==2||atlas_view)?0:room_x+cyc_mod_peek(0x70)+8-w/2;
@@ -276,8 +300,9 @@ const uint32_t *zelda_world_present(int *width,int *height) {
     camera_x=clamp(camera_x,w>WORLD_W?(WORLD_W-w)/2:0,w>WORLD_W?(WORLD_W-w)/2:WORLD_W-w);
     camera_y=clamp(camera_y,h-HUD_H>WORLD_H?(WORLD_H-(h-HUD_H))/2:0,
                    h-HUD_H>WORLD_H?(WORLD_H-(h-HUD_H))/2:WORLD_H-(h-HUD_H));
-    prepare_rasters();
-    for(size_t i=0;i<count;i++)canvas[i]=0xff000000u;
+    prepare_rasters(w,h);
+    unsigned background=cyc_ppu_palette()[0]&63;if(frame_mask&1)background&=0x30;
+    for(size_t i=0;i<count;i++)canvas[i]=g_nes_palette[background];
     for(int y=HUD_H;y<h;y++) {
         int wy=camera_y+y-HUD_H;if(wy<0||wy>=WORLD_H)continue;
         for(int x=0;x<w;) {
@@ -288,12 +313,15 @@ const uint32_t *zelda_world_present(int *width,int *height) {
             x+=run;
         }
     }
-    const uint32_t *native=cyc_frame_argb();
     int hud_x=(w-ROOM_W)/2;
-    for(int y=0;y<HUD_H;y++)for(int x=0;x<ROOM_W;x++)if(hud_x+x>=0&&hud_x+x<w)
-        canvas[(size_t)y*w+hud_x+x]=native[y*ROOM_W+x];
+    for(int y=0;y<HUD_H;y++) {
+        /* Include native backdrop flashes across the entire HUD backplate. */
+        for(int x=0;x<w;x++)canvas[(size_t)y*w+x]=native[y*ROOM_W];
+        for(int x=0;x<ROOM_W;x++)if(hud_x+x>=0&&hud_x+x<w)
+            canvas[(size_t)y*w+hud_x+x]=native[y*ROOM_W+x];
+    }
     if(mode==3) {
-        for(unsigned id=0;id<128;id++)if(id!=room&&rooms[id].owned)draw_actors(id,w,h);
+        if(!death_view)for(unsigned id=0;id<128;id++)if(id!=room&&rooms[id].owned)draw_actors(id,w,h);
         draw_actors(room,w,h);
     } else {
         for(int y=0;y<ROOM_H;y++)for(int x=0;x<ROOM_W;x++) {
@@ -301,6 +329,26 @@ const uint32_t *zelda_world_present(int *width,int *height) {
             if(dx>=0&&dx<w&&dy>=HUD_H&&dy<h)canvas[(size_t)dy*w+dx]=native[(y+HUD_H)*ROOM_W+x];
         }
     }
+    if(game_mode==5) {
+        /* The native inventory pushes its playfield down from the HUD. Use
+         * that frame's actual split scroll, but shift our current world view,
+         * never the stale native nametable underneath the inventory. */
+        int panel=clamp((64-cyc_render_line_scroll_y(64)+480)%480,0,175);
+        if(panel) {
+            if(panel>h-HUD_H)panel=h-HUD_H;
+            memmove(canvas+(size_t)(HUD_H+panel)*w,canvas+(size_t)HUD_H*w,
+                (size_t)(h-HUD_H-panel)*w*sizeof *canvas);
+            for(int y=HUD_H;y<HUD_H+panel;y++) {
+                for(int x=0;x<w;x++)canvas[(size_t)y*w+x]=native[y*ROOM_W];
+                for(int x=0;x<ROOM_W;x++)if(hud_x+x>=0&&hud_x+x<w)
+                    canvas[(size_t)y*w+hud_x+x]=native[y*ROOM_W+x];
+            }
+        }
+    } else if(cyc_mod_peek(0x11)&&cyc_mod_peek(0x13)>=12) {
+        /* Text-only Game Over/Continue uses the same expanding canvas. */
+        native_page(native,w,h);
+    }
+complete:
     picture_w=w;picture_h=h;*width=w;*height=h;
     render_us[render_count++%TIMING_COUNT]=(SDL_GetPerformanceCounter()-started)*1e6/SDL_GetPerformanceFrequency();
     return canvas;
@@ -337,6 +385,9 @@ static void world_state(int id,const char *line) {
     for(unsigned id=0;id<128;id++)if(rooms[id].simulation_ready){simulated++;ticks+=rooms[id].ticks;for(unsigned s=1;s<=11;s++)actors+=rooms[id].ram[0x34f+s]!=0;}
     snprintf(out,sizeof out,"\"enabled\":%s,\"stage\":\"room-simulation\",\"level\":%d,\"decoded\":%u,\"failures\":%llu,\"camera\":[%d,%d],\"size\":[%d,%d],\"adjacent_actors\":%s,\"seamless_traversal\":%s,\"simulated_rooms\":%u,\"actors\":%u,\"neighbor_ticks\":%llu,\"handoffs\":%llu",
              mode?"true":"false",cached_level,decoded,(unsigned long long)(failed+zelda_world_sim_failures()),camera_x,camera_y,picture_w,picture_h,mode==3?"true":"false",mode==3?"true":"false",simulated,actors,(unsigned long long)ticks,(unsigned long long)zelda_world_handoffs());
+    size_t used=strlen(out);
+    snprintf(out+used,sizeof out-used,",\"menu\":%u,\"game_mode\":%u,\"scroll_y64\":%d,\"mask64\":%u",
+        cyc_mod_peek(0xe1),cyc_mod_peek(0x12),cyc_render_line_scroll_y(64),cyc_render_line_mask(64));
     cyc_tcp_ok(id,out);
 }
 static int compare_time(const void *a,const void *b) {double x=*(const double *)a,y=*(const double *)b;return (x>y)-(x<y);}

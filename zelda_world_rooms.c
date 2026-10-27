@@ -367,6 +367,8 @@ static void teleport(int id,const char *line) {
     poke(0x394,0);poke(0xac,0);poke(0x4f0,120);
     bool gear=false;cyc_tcp_bool(line,"gear",&gear);
     if(gear){poke(0x657,1);poke(0x66f,0x77);poke(0x670,255);poke(0x658,8);poke(0x67c,8);poke(0x66e,1);}
+    bool fragile=false;cyc_tcp_bool(line,"fragile",&fragile);
+    if(fragile){poke(0x66f,0);poke(0x670,1);poke(0x4f0,0);}
     previous_room=(int)room;previous_x=(int)x;previous_y=(int)y;
     cyc_tcp_ok(id,"\"qa_teleport\":true");
 }

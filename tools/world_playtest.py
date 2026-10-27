@@ -22,8 +22,11 @@ PAGE = '''<!doctype html><meta charset="utf-8"><title>Zelda seamless playtest</t
 <p>Resume and walk straight up. The supplied key should open the door. Keep walking into the next room without a scrolling transition. Walk back; the door should remain open. Walk down out of the entrance to test the preserved overworld portal.</p><div id="dungeon"></div></section>
 <section><h2>3. Combat and current-build states</h2><button onclick="load('corridor')">Load dungeon corridor, paused</button>
 <p>Resume, fight the skeletons with Z, and move between the connected rooms. Use F7 to save/load a spare slot and F8 to rewind. Prepared slots 1–3 match these setups; use slot 4 or higher for your saves.</p><small>Enemy migration and projectile interactions across room boundaries are not complete. Bosses, later dungeons, secrets and both quests still need coverage. Bombable/false walls retain original transitions.</small><div id="combat"></div></section>
+<section><h2>4. HUD, inventory and death fixes</h2><button onclick="load('overworld')">Load bomb/inventory setup</button>
+<p>Place a bomb with X: its flash should cover the full HUD and world. Open and close inventory with Enter: the current expanded scene should slide down and return without changing aspect or jumping to another area.</p><div id="flash"></div><div id="inventory"></div>
+<button onclick="load('death')">Load lethal-contact setup, paused</button><p>Resume: Link starts next to a live enemy with very low health. The enemy must cause the death. The wide view should stay in place through the death fade, Game Over and Continue. Press Enter on Continue.</p><div id="death"></div></section>
 <p id="status"></p><script>
-const ids=['overworld','dungeon','combat'];
+const ids=['overworld','dungeon','combat','flash','inventory','death'];
 for(const id of ids)document.getElementById(id).innerHTML=`<select id="${id}-result"><option>Deferred</option><option>Pass</option><option>Fail</option></select><textarea id="${id}-note" placeholder="Observations or problems"></textarea><button onclick="record('${id}')">Save observation</button>`;
 async function act(body){try{let r=await fetch('/api/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let j=await r.json();document.getElementById('status').textContent=j.ok?'Saved / ready':j.error;return j}catch(e){document.getElementById('status').textContent=e.message}}
 function load(setup){act({action:'setup',setup})}
@@ -75,15 +78,22 @@ def main():
         command('save_state',path=str((dest/'overworld.state').resolve()))
         shutil.copy2(a.dungeon,dest/'dungeon.state');shutil.copy2(a.corridor,dest/'corridor.state')
         saves=a.exe.parent/'saves';saves.mkdir(exist_ok=True)
-        for i,name in enumerate(setups,1):shutil.copy2(dest/(name+'.state'),saves/(a.rom.stem+f'.slot{i:02d}.cycstate'))
+        for i,name in enumerate(setups,1):
+            slot=saves/(a.rom.stem+f'.slot{i:02d}.cycstate')
+            if not slot.exists():shutil.copy2(dest/(name+'.state'),slot)
         command('screenshot',layer='picture',path=str((a.folder/'prepared-overworld.png').resolve()))
         for name,source in (('dungeon',a.dungeon),('corridor',a.corridor)):
             command('load_state',path=str(source.resolve()))
             assert command('zelda_world')['level']==1
             command('screenshot',layer='picture',path=str((a.folder/('prepared-'+name+'.png')).resolve()))
+        command('load_state',path=str((dest/'overworld.state').resolve()))
+        enemy=next(x for x in command('zelda_world_room',room=0x76)['slots'] if x['type'] and x['hp'] and x['meta']==0)
+        command('zelda_world_teleport',room=0x76,x=min(240,enemy['x']),y=max(64,min(239,enemy['y'])),fragile=True)
+        command('save_state',path=str((dest/'death.state').resolve()))
         (a.folder/'prepared.json').write_text(json.dumps(dict(world=world,slots=list(setups),native_saves_disabled=True),indent=2)+'\n')
         command('quit');p.wait(timeout=10);log.close();print('Prepared states and mod activation passed');return
     notes_path=a.folder/'observations.json'
+    if (a.folder/'setups/death.state').exists():setups['death']=a.folder/'setups/death.state'
     notes=json.loads(notes_path.read_text()) if notes_path.exists() else {}
     class Handler(BaseHTTPRequestHandler):
         def reply(self,data,content='application/json',status=200):
@@ -100,7 +110,7 @@ def main():
                 if action=='setup':command('menu',open=True);command('load_state',path=str(setups[req['setup']].resolve()))
                 elif action in ('resume','pause'):command('menu',open=action=='pause')
                 elif action=='record':
-                    assert req['id'] in ('overworld','dungeon','combat') and req['result'] in ('Pass','Fail','Deferred')
+                    assert req['id'] in ('overworld','dungeon','combat','flash','inventory','death') and req['result'] in ('Pass','Fail','Deferred')
                     notes[req['id']]=dict(result=req['result'],note=req.get('note',''),time=time.strftime('%Y-%m-%dT%H:%M:%S%z'))
                     notes_path.write_text(json.dumps(notes,indent=2)+'\n',encoding='utf-8')
                 else:raise ValueError('Unknown action')

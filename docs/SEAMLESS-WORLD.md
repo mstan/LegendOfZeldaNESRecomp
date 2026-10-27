@@ -25,7 +25,11 @@ retained. Current save states include the room instances and local timers.
 Caves, stairs, dungeon entrance/exit, Lost Woods and mountain-maze routing retain
 native portals. Bombable and false-wall passages also currently retain their
 original transitions. The owner selected preserving puzzle routing with portals.
-Menus and unsupported game modes use the native presentation.
+Inventory slides over the retained expanded world. HUD backdrops and grayscale
+bomb flashes span the entire viewport. Death retains that world camera, uses
+the native death palette/Link animation, and fades the whole visible area.
+Continue, restart/load and portal pages retain the viewport dimensions with
+centered native UI, so they do not switch the display aspect.
 
 ## Implementation
 
@@ -69,7 +73,8 @@ that a full playthrough or every dungeon has passed.
 | Native saves | Preserved, coverage open | All QA disables native saves and uses disposable profiles; full normal-save gameplay audit remains |
 | Shutters and block puzzles | Implemented, broad validation open | Native rules and held incoming door masks; remaining puzzle combinations need coverage |
 | Combat and cross-boundary interactions | Partial | Native combat in active room; sword follows Link. Cross-room enemy migration and projectile interactions are incomplete |
-| Secrets, bosses and death/retry | Unverified | Need representative checks before release |
+| Death/Continue, inventory and bomb flashes | Representative pass | Owner-reported aspect/scene regressions reproduced and fixed; actual bombs, native lethal enemy contact, death and Continue tested in overworld and Level 1. Owner recheck pending |
+| Secrets, bosses and other retry routes | Unverified | Need representative checks before release |
 | Lost Woods, mountain maze and all warp routes | Routing preserved, unverified | Original portal path retained; puzzle sequences still need explicit tests |
 | Second quest / every dungeon | Unverified | No full-content audit claimed |
 | Human presentation/play check | Ready, awaiting observations | Prepared overworld, Level 1 key door and corridor states; lightweight selector saves Pass/Fail/Deferred notes |
@@ -108,3 +113,22 @@ Allegro and another resource format. Minish Cap's existing foreign Zelda world
 provides useful verified data spans but is not a complete gameplay replacement.
 Emerald and Minish Cap's adaptive-view plugins were consulted for Fit behavior:
 real expanded content, window aspect in landscape/portrait, and anchored UI.
+
+## Owner regression follow-up
+
+The owner reported narrow bomb flashes, inventory falling back to a different
+native room view, and narrow death presentation (supplied screenshot). All
+three are tracked as owner findings, pending human recheck.
+
+`probe-effects-final-overworld/results.json` and
+`probe-effects-final-dungeon/results.json` exercise real input to open/close
+inventory and place a bomb. Native lethal enemy contact is induced by placing
+Link beside an existing enemy with low health, without setting a death mode or
+completion flag. The death sequence, Continue page and return to gameplay retain
+the viewport. Camera coordinates before/after inventory match. Background tests
+use disposable profiles, muted output and disabled physical player inputs.
+The owner checklist records flash, inventory and death observations separately.
+
+Raster color updates now build only rooms intersecting the camera, so an
+expanded bomb flash does not rebuild distant invisible terrain. Full-map views
+still include every owned room; room simulation/activation rules are unchanged.
