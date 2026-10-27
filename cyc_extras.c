@@ -43,6 +43,7 @@ static void event(void *ctx, const void *ev, int player) {
 }
 static void frame_end(void *ctx) {
     (void)ctx;
+    zelda_world_frame_end();
     cyc_presentation_sync();
     int width,height;const uint32_t *native=cyc_render_present(&width,&height);
     memcpy(picture,native,(size_t)width*height*sizeof(*picture));
@@ -50,7 +51,7 @@ static void frame_end(void *ctx) {
 }
 static void state_loaded(void *ctx) {
     (void)ctx;
-    zelda_world_reset();
+    zelda_world_state_loaded();
 }
 static const uint32_t *present(void *ctx,int *width,int *height) {
     /* Rebuild after a load as well. The profile's stable-room cache is part
@@ -113,7 +114,7 @@ static void tcp_setup(void *ctx) {
     zelda_world_tcp_setup();
 }
 static const CycHostOption options[]={
-    {"--world-view",true,"Development terrain camera: off, follow or atlas"},
+    {"--world-view",true,"World view: off, follow, atlas or seamless"},
     {"--world-size",true,"Development world viewport WxH (128..4096 x 128..2048)"},
     {"--voxel",true,"stock, diorama or first-person"},
 #if defined(NESRECOMP_CYCLE_HDPACK) && !defined(NESRECOMP_CYCLE_HDPACK_MODS)

@@ -19,6 +19,7 @@ def main():
     ap.add_argument('--out', type=Path, required=True)
     ap.add_argument('--port', type=int, default=27581)
     ap.add_argument('--adaptive', action='store_true')
+    ap.add_argument('--live',action='store_true')
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, SDL_AUDIODRIVER='dummy', SDL_VIDEODRIVER='dummy',
@@ -40,7 +41,7 @@ def main():
         command = [str(args.exe.resolve()), str(args.rom.resolve()),
                               '--hidden', '--no-save', '--tcp', str(args.port),
                               '--config', str(config.resolve()),
-                              '--world-view', 'follow']
+                              '--world-view', 'seamless' if args.live else 'follow']
         if not args.adaptive:
             command += ['--world-size', '768x480']
         p = subprocess.Popen(command,
@@ -61,8 +62,8 @@ def main():
                     time.sleep(.1)
             if stream is None:
                 raise RuntimeError('debug server did not start')
-            def cmd(name, **fields):
-                stream.write((json.dumps(dict(cmd=name, id=1, **fields))+'\n').encode())
+            def cmd(command, **fields):
+                stream.write((json.dumps(dict(cmd=command, id=1, **fields))+'\n').encode())
                 stream.flush()
                 reply = json.loads(stream.readline())
                 if not reply.get('ok'):
@@ -72,6 +73,7 @@ def main():
             cmd('load_state', path=str(args.state.resolve()))
             results['guest'] = cmd('zelda_state')
             results['probe'] = cmd('zelda_world_probe')
+            if args.live:cmd('zelda_world_timing',reset=True)
             results['picture'] = cmd('screenshot', layer='picture', path=str((args.out/'follow.png').resolve()))
             results['world'] = cmd('zelda_world')
             if args.adaptive:
@@ -88,6 +90,16 @@ def main():
                         time.sleep(.05)
                     assert shot['size'] == expected, (expected, shot)
                     results['resizes'].append(shot)
+                if args.live:
+                    results['fit_timing']=cmd('zelda_world_timing',reset=True)
+                    cmd('key',name='F4',frames=1)
+                    time.sleep(.3)
+                    shot=cmd('screenshot',layer='picture',path=str((args.out/'atlas-live.png').resolve()))
+                    assert shot['size']==[4096,1472],shot
+                    time.sleep(1)
+                    results['atlas']=dict(picture=shot,world=cmd('zelda_world'),timing=cmd('zelda_world_timing'))
+                    assert results['atlas']['world']['simulated_rooms']==128
+                    assert results['atlas']['world']['failures']==0
             cmd('quit')
             p.wait(timeout=10)
             assert p.returncode == 0, p.returncode
@@ -95,7 +107,7 @@ def main():
                         'live_attrs_exact', 'machine_state_unchanged')), results['probe']
             if not args.adaptive:
                 assert results['picture']['size'] == [768, 480], results['picture']
-            assert results['world']['decoded'] >= 128 and results['world']['failures'] == 0
+            assert (args.live or results['world']['decoded'] >= 128) and results['world']['failures'] == 0
             results['status'] = 'pass'
         finally:
             if stream:

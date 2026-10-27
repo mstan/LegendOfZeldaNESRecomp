@@ -4,10 +4,11 @@
 #include <stdint.h>
 #include <SDL.h>
 
-/* Development world-view foundation. Gameplay still uses the original room
- * simulation until the room ownership work is complete. Never enabled by
- * default or advertised as a finished seamless gameplay mode. */
+/* Experimental continuous room simulation and adaptive world presentation.
+ * Optional, local play only; ordinary stock launches retain their behavior. */
 void zelda_world_reset(void);
+void zelda_world_state_loaded(void);
+void zelda_world_frame_end(void);
 bool zelda_world_option(const char *name, const char *value);
 void zelda_world_event(const SDL_Event *event);
 const uint32_t *zelda_world_present(int *width, int *height);

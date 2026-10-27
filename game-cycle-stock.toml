@@ -3,3 +3,28 @@ name = "The Legend of Zelda (USA)"
 output_prefix = "zelda_stock"
 console = "nes"
 cycle_accurate = true
+
+[[mod_function_hook]]
+id = "zelda.world.edge"
+addr = 0xF161
+bytes = "A6 84 AD F8 03 F0"
+
+[[mod_function_hook]]
+id = "zelda.world.player"
+addr = 0xEDA0
+bytes = "A2 00 20 98 FE A5"
+
+[[mod_function_hook]]
+id = "zelda.world.moving-tile"
+addr = 0xEDFA
+bytes = "A0 F8 E0 00 F0 02"
+
+[[mod_function_hook]]
+id = "zelda.world.still-tile"
+addr = 0xEDF4
+bytes = "A0 00 84 0F F0 16"
+
+[[mod_function_hook]]
+id = "zelda.world.doorway"
+addr = 0x917C
+bytes = "A5 53 D0 22 A5 98"

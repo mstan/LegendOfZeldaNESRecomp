@@ -1,0 +1,37 @@
+format_version = 1
+id = "legend-of-zelda.enhancement.seamless-world"
+version = "0.1.0"
+name = "Seamless World (Experimental)"
+author = "NESRecomp"
+description = "Follow Link continuously across ordinary room boundaries, with neighboring terrain and live actors visible ahead. The view fits the window and expands when resized. Local play."
+license = "MIT"
+resolver = "declarative"
+save_compatibility = "seamless-world-preview"
+
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "3fe272fb"
+
+[[feature]]
+id = "seamless-world"
+name = "Seamless World (Experimental)"
+description = "Adaptive Fit to screen. Mouse wheel changes zoom; F4 toggles the whole map. Caves, stairs and maze puzzles retain portal transitions. Full-map simulation is slower."
+group = "Display"
+default_enabled = false
+exclusive_group = "display-mode"
+
+[[plugin]]
+feature = "seamless-world"
+id = "legend-of-zelda.seamless-world"
+
+[[option]]
+feature = "seamless-world"
+id = "pixel-zoom"
+label = "Pixel zoom"
+description = "Larger pixels show less world. Resizing the window always adjusts the visible area to fit. The mouse wheel changes this during play."
+group = "Camera"
+type = "integer"
+default = 3
+min = 1
+max = 8
+step = 1
