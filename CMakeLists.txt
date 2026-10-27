@@ -3,7 +3,7 @@ project(LegendOfZeldaNESRecomp C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-set(NESRECOMP_GAME_VERSION "1.9.5" CACHE STRING "Game release version")
+set(NESRECOMP_GAME_VERSION "1.10.0" CACHE STRING "Game release version")
 
 set(NESRECOMP_ROOT "${CMAKE_SOURCE_DIR}/nesrecomp" CACHE PATH
     "Path to the NESRecomp source tree")
@@ -47,9 +47,6 @@ if(NESRECOMP_BACKEND STREQUAL "cycle")
                 "${NESRECOMP_ROOT}/runner/src/keybinds.c")
         target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}")
         target_compile_definitions(${TARGET} PRIVATE ZELDA_CYCLE NESRECOMP_CYCLE_PRESENTATION)
-        set(ZELDA_BUILD_REVISION "development" CACHE STRING "Source revision for diagnostic logs")
-        target_compile_definitions(${TARGET} PRIVATE
-            CYC_BUILD_VERSION="1.9.2" CYC_BUILD_REVISION="${ZELDA_BUILD_REVISION}")
         if(MSVC)
             # Keep an optimized release while retaining its matching crash symbols.
             target_compile_options(${TARGET} PRIVATE /Zi)

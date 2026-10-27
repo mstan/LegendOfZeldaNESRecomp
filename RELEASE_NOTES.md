@@ -1,19 +1,29 @@
-# v1.9.1 — startup and crash diagnostics
+# v1.10.0 — Seamless Overworld (experimental)
 
-- Adds a bundled **Startup and Crash Diagnostics** mod, disabled by default.
-  Enable it in Mods before PLAY to record startup, host settings, renderer,
-  progress and exit details. Windows crashes attempt a matching minidump.
-- Capture begins when the mod is enabled, including the first PLAY handoff.
-  Persistent selections start capture before the launcher opens on later runs.
-- Displays error dialogs for game SDL initialization, window/renderer creation
-  and ROM-loading failures instead of silently returning to the desktop.
-- Retains matching release symbols in a separate download for dump analysis.
+This minor feature release adds **Seamless Overworld** as the first bundled
+entry in **Mods → Camera**, with a separate Experimental badge. Enable it before
+PLAY; it is disabled by default.
 
-Share the newest `.log` and matching `.dmp`, if present, from `diagnostics`
-beside the executable. See DIAGNOSTICS.md for fallback storage and privacy.
-The reported v1.9.0 PLAY crash remains under investigation; this release adds
-evidence collection and does not claim to fix an unconfirmed cause.
+- Follow Link continuously through ordinary overworld and connected dungeon
+  boundaries, with neighboring terrain and live actors visible ahead.
+- Fit the view to the window's aspect ratio, including portrait and ultrawide.
+  Use the mouse wheel for pixel zoom and F4 for the whole map.
+- Keep the expanded scene during inventory, bomb flashes, death and portal
+  loading. Game Over and Continue use a responsive layout.
+- Preserve native puzzle routing at caves, stairs, dungeon entrances and maze
+  portals. Cave interiors extend their boundary terrain across the view.
+- Include actual overworld, dungeon and whole-map pictures in the README.
 
-The cycle backend, stock ROM requirement, existing voxel modes and HD Mods
-workflow are retained. No ROM, third-party HD art, settings or personal progress
-is included. Legacy binary save states still require the legacy backend.
+The mod is experimental and local-only. Enemy migration and projectile
+interactions across room boundaries are incomplete; the whole-map simulation
+is slower. Later dungeons, bosses, both quests and strict replay timing remain
+open validation areas. It is mutually exclusive with voxel and Remastered views.
+
+Focused checks cover real overworld crossings, a dungeon key door, cave/Level 1
+entry and exit, inventory, bombs, lethal enemy contact, Game Over/Continue/Retry,
+window resizing and loading-state picture restoration. No full-game audit is
+claimed. Existing native progress is preserved; save states are build-specific.
+
+Supply your original USA PRG0 ROM. No ROM, third-party HD art, personal saves
+or settings are included. See README.md and docs/SEAMLESS-WORLD.md for controls,
+pictures and the remaining experimental limits.

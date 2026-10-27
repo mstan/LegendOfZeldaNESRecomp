@@ -20,7 +20,7 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
 
 ## What Works
 
-- Overworld exploration with screen transitions
+- Overworld exploration, with optional seamless camera and neighboring rooms
 - Dungeons, bosses, and items
 - Enemies and combat
 - Caves (old man, merchants, dungeon entrances)
@@ -32,6 +32,41 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
 1. Download `LegendOfZeldaNESRecomp-windows-x64.zip` from [Releases](../../releases)
 2. Extract and run `LegendOfZeldaNESRecomp.exe`
 3. Select your Legend of Zelda (USA) ROM when prompted — the path is saved for future launches
+
+## Seamless Overworld · Experimental
+
+New in **v1.10.0**. Open **Mods** and enable **Seamless Overworld**, the first
+entry under **Camera**. Its amber **EXP / EXPERIMENTAL** badge marks it as an
+experimental feature. It is bundled and disabled by default.
+
+<p align="center">
+  <img src="docs/assets/seamless-overworld.png" alt="Expanded Zelda overworld showing Link and live enemies in neighboring areas" width="960">
+</p>
+
+The camera follows Link across ordinary room boundaries, with neighboring
+terrain and actors visible before he enters. Connected dungeon rooms also
+share the continuous view. **Fit to screen** expands the visible world to match
+the window in landscape or portrait; resize freely, use the **mouse wheel** to
+change pixel zoom, or press **F4** to see the whole map.
+
+<p align="center">
+  <img src="docs/assets/seamless-dungeon.png" alt="Level 1 dungeon with multiple connected rooms and their enemies visible together" width="960">
+</p>
+
+Inventory retains the expanded scene, bomb flashes span the view, and death,
+Game Over and Continue keep the window's framing. Caves, stairs, dungeon
+entrances and maze puzzles preserve their original portal routing. This mode
+is mutually exclusive with voxel and Remastered views.
+
+<p align="center">
+  <a href="docs/assets/seamless-atlas.png"><img src="docs/assets/seamless-atlas.png" alt="The entire Zelda overworld displayed at once using the whole-map view" width="960"></a>
+</p>
+
+**Experimental limits:** local play only. Enemy migration and projectile
+interactions across room boundaries are incomplete, the whole-map simulation
+runs slower, and later dungeons, bosses and both quests still need broader
+coverage. These are representative gameplay checks, not a full-game completion
+claim. See [implementation and validation notes](docs/SEAMLESS-WORLD.md).
 
 ## Controls
 
@@ -52,8 +87,8 @@ See [DIAGNOSTICS.md](DIAGNOSTICS.md).
 |--------|--------|
 | Escape | Menu/settings |
 | Tab | Hold fast-forward |
-| F8 | Save cycle state |
-| F9 | Load cycle state |
+| F7 | Save-state slots |
+| F8 | Rewind |
 | F11 | Fullscreen |
 | F12 | Screenshot |
 | Numpad 0 | Toggle Voxel 3D |
@@ -179,6 +214,7 @@ The original 6502 code is translated to cycle-aware C and compiled to native cod
 - Remastered preserves the existing sampler limitations for unsupported conditions or missing images. HD-pack replacement music and sound files remain unsupported.
 - Legacy binary save states do not transfer to the cycle backend. Raw battery progress remains portable.
 - Voxel views retain their existing experimental camera and geometry limitations.
+- Seamless Overworld remains experimental; its current limitations are listed above.
 
 ## License
 

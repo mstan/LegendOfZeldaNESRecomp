@@ -1,14 +1,16 @@
-# Seamless world preview
+# Seamless Overworld (experimental)
 
 Owner request: 2026-10-27. Bead: `beads-2dw.18.3`.
 Isolated branch: `feat/seamless-world-20261027`, based on Zelda v1.9.5.
-Engine preview pin: `159b9cf01714e593087f83215015ff9025b8c1a2`, based on
-`721c68c313e729710203f6825e9bcb9042eb5bcc`. It adds a read-only drawable-size
+Released as an optional mod in **Zelda v1.10.0**, at the owner's request.
+Engine pin: `23e87d71f6da42e22450323d882047b90363798d`. It integrates the
+validated `159b9cf` getter with current engine documentation and adds a read-only drawable-size
 API so Fit updates while menus own input; tracking: `beads-2dw.1.107`.
 
 ## Playable behavior
 
-Enable **Seamless World (Experimental)** in Mods. It is an optional, local-play
+Enable **Seamless Overworld** at the top of Mods under **Camera**, with its
+separate Experimental badge. It is an optional, local-play
 presentation/gameplay enhancement, exclusive with the voxel display modes.
 **Fit to screen is adaptive:** the window's width and height determine how much
 actual world is visible at the selected pixel zoom. Wide and portrait windows
@@ -82,7 +84,7 @@ that a full playthrough or every dungeon has passed.
 | Secrets, bosses and other retry routes | Unverified | Need representative checks before release |
 | Lost Woods, mountain maze and all warp routes | Routing preserved, unverified | Original portal path retained; puzzle sequences still need explicit tests |
 | Second quest / every dungeon | Unverified | No full-content audit claimed |
-| Human presentation/play check | Ready, awaiting observations | Prepared overworld, Level 1 key door and corridor states; lightweight selector saves Pass/Fail/Deferred notes |
+| Human presentation/play check | Owner authorized experimental release | Owner tested the preview and requested v1.10.0 packaging. Remaining limitations stay documented; this is not blanket full-game validation |
 | Portability / online play | Open / disabled | C11 and SDL implementation; Windows x64 built. Other targets unverified; mod explicitly local-only |
 
 `probe-final-gameplay/results.json` contains the traversal/door/portal receipt;

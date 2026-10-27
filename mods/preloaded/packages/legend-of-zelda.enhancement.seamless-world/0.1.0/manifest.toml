@@ -1,7 +1,7 @@
 format_version = 1
 id = "legend-of-zelda.enhancement.seamless-world"
 version = "0.1.0"
-name = "Seamless World (Experimental)"
+name = "Seamless Overworld"
 author = "NESRecomp"
 description = "Follow Link continuously across ordinary room boundaries, with neighboring terrain and live actors visible ahead. The view fits the window and expands when resized. Local play."
 license = "MIT"
@@ -14,9 +14,10 @@ rom_crc32 = "3fe272fb"
 
 [[feature]]
 id = "seamless-world"
-name = "Seamless World (Experimental)"
-description = "Adaptive Fit to screen. Mouse wheel changes zoom; F4 toggles the whole map. Caves, stairs and maze puzzles retain portal transitions. Full-map simulation is slower."
-group = "Display"
+name = "Seamless Overworld"
+experimental = true
+description = "A continuous camera with neighboring terrain and live actors, including connected dungeon rooms. Fits the window as it resizes. Mouse wheel changes zoom; F4 shows the whole map. Caves, stairs and maze puzzles keep their portal routing. Cross-room enemy/projectile interactions are incomplete; full-map simulation is slower. Local play only."
+group = "Camera"
 default_enabled = false
 exclusive_group = "display-mode"
 

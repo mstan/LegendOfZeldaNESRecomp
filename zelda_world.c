@@ -532,7 +532,7 @@ bool zelda_world_option(const char *name,const char *value) {
         else if(!strcmp(value,"seamless"))mode=3;
         else return false;
         zelda_world_enable_hooks(mode==3);
-        if(mode==3)nes_mod_set_local_only("Seamless world",1);
+        if(mode==3)nes_mod_set_local_only("Seamless Overworld",1);
         return true;
     }
     if(!strcmp(name,"--world-size")) {
@@ -616,7 +616,7 @@ void zelda_world_tcp_setup(void) {
 static void reset_world_plugin(void) {mode=0;fixed_w=fixed_h=0;atlas_view=false;zelda_world_enable_hooks(false);}
 static void activate_world_plugin(void) {
     mode=3;zoom=nes_mod_get_option_int("legend-of-zelda.enhancement.seamless-world","seamless-world","pixel-zoom",3);
-    zelda_world_enable_hooks(true);nes_mod_set_local_only("Seamless world",1);
+    zelda_world_enable_hooks(true);nes_mod_set_local_only("Seamless Overworld",1);
 }
 NES_MOD_CONSTRUCTOR(register_world_plugin) {
     if(!nes_mod_register_reset_callback(reset_world_plugin)||

@@ -2,12 +2,11 @@
    powershell -File tools\make_release.ps1 -Rom "F:\ROMs\Legend of Zelda.NES"
    powershell -File tools\make_release.ps1 -SkipBuild
 #>
-param([string]$Rom, [switch]$SkipBuild)
+param([string]$Rom, [switch]$SkipBuild, [string]$BuildDirectory, [string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
-$build = Join-Path $root 'build-cycle'
-$bin = Join-Path $build 'Release'
-$out = Join-Path $root 'release'
+$build = if ($BuildDirectory) { [IO.Path]::GetFullPath($BuildDirectory) } else { Join-Path $root 'build-cycle' }
+$out = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $root 'release' }
 $cachePath = Join-Path $build 'CMakeCache.txt'
 $cache = if (Test-Path -LiteralPath $cachePath) { Get-Content -LiteralPath $cachePath -Raw } else { '' }
 function Get-CacheValue([string]$Name) {
@@ -46,7 +45,8 @@ if (-not $SkipBuild) {
     if (-not $Rom) { $Rom = Get-CacheValue 'NESRECOMP_ROM' }
     if (-not $Rom -or -not (Test-Path -LiteralPath $Rom -PathType Leaf)) { throw 'Supply a verified USA PRG0 ROM with -Rom.' }
     $Rom = (Resolve-Path -LiteralPath $Rom).Path
-    $cmake = 'C:\Program Files\CMake\bin\cmake.exe'
+    $cmake = Get-CacheValue 'CMAKE_COMMAND'
+    if (-not $cmake) { $cmake = 'C:\Program Files\CMake\bin\cmake.exe' }
     if (-not (Test-Path -LiteralPath $cmake)) { $cmake = (Get-Command cmake.exe -ErrorAction Stop).Source }
     $args = @('-S', $root, '-B', $build, '-DNESRECOMP_BACKEND=cycle', "-DNESRECOMP_ROM=$Rom")
     Invoke-HiddenBuild $cmake $args
@@ -54,6 +54,7 @@ if (-not $SkipBuild) {
     $cache = Get-Content -LiteralPath $cachePath -Raw
 }
 if ((Get-CacheValue 'NESRECOMP_BACKEND') -ne 'cycle') { throw 'Refusing to package a legacy build.' }
+$bin = if (Test-Path -LiteralPath (Join-Path $build 'Release\LegendOfZeldaNESRecomp.exe')) { Join-Path $build 'Release' } else { $build }
 New-Item -ItemType Directory -Force -Path $out | Out-Null
 $variants = @('LegendOfZeldaNESRecomp')
 foreach ($target in $variants) {
@@ -64,6 +65,9 @@ foreach ($target in $variants) {
     New-Item -ItemType Directory -Path $stage | Out-Null
     try {
         foreach ($file in "$target.exe", 'SDL2.dll') { Copy-Item -LiteralPath (Join-Path $bin $file) -Destination $stage }
+        foreach ($dll in 'libgcc_s_seh-1.dll', 'libstdc++-6.dll', 'libwinpthread-1.dll') {
+            if (Test-Path -LiteralPath (Join-Path $bin $dll)) { Copy-Item -LiteralPath (Join-Path $bin $dll) -Destination $stage }
+        }
         Copy-Item -LiteralPath (Join-Path $bin 'assets') -Recurse -Destination (Join-Path $stage 'assets')
         Copy-Item -LiteralPath (Join-Path $root 'mods\preloaded') -Recurse -Destination (Join-Path $stage 'mods')
         New-Item -ItemType Directory -Path (Join-Path $stage 'tools') | Out-Null
@@ -73,9 +77,38 @@ foreach ($target in $variants) {
         if (-not $framework) { $framework = Join-Path $root 'nesrecomp' }
         Copy-Item -LiteralPath (Join-Path $framework 'tools\package_hdpack.py') -Destination (Join-Path $stage 'tools')
         Copy-Item -LiteralPath (Join-Path $root 'hdpatch\ZeldaRemasteredReadme.txt') -Destination (Join-Path $stage 'hdpatch')
-        foreach ($doc in 'CYCLE-MIGRATION.md', 'RELEASE_NOTES.md', 'DIAGNOSTICS.md', 'LICENSE') { Copy-Item -LiteralPath (Join-Path $root $doc) -Destination $stage }
+        foreach ($doc in 'README.md', 'CYCLE-MIGRATION.md', 'RELEASE_NOTES.md', 'DIAGNOSTICS.md', 'LICENSE') { Copy-Item -LiteralPath (Join-Path $root $doc) -Destination $stage }
+        New-Item -ItemType Directory -Path (Join-Path $stage 'docs\assets') | Out-Null
+        Copy-Item -LiteralPath (Join-Path $root 'docs\SEAMLESS-WORLD.md') -Destination (Join-Path $stage 'docs')
+        foreach ($image in 'seamless-overworld.png', 'seamless-dungeon.png', 'seamless-atlas.png', 'voxel-3d.webp') {
+            Copy-Item -LiteralPath (Join-Path $root "docs\assets\$image") -Destination (Join-Path $stage 'docs\assets')
+        }
+        $symbolFile = Join-Path $bin "$target.pdb"
+        $splitSymbols = $false
+        if (-not (Test-Path -LiteralPath $symbolFile)) {
+            $objcopy = Get-CacheValue 'CMAKE_OBJCOPY'
+            if (-not $objcopy -or -not (Test-Path -LiteralPath $objcopy) -or
+                (Get-CacheValue 'CMAKE_C_FLAGS_RELEASE') -notmatch '(?<!\S)-g\d*(?!\S)') {
+                throw 'Build with matching PDBs or GNU debug information before packaging.'
+            }
+            $symbolFile = Join-Path $out "$target.exe.debug"
+            $splitSymbols = $true
+            $stagedExe = Join-Path $stage "$target.exe"
+            Invoke-HiddenBuild $objcopy @('--only-keep-debug', $stagedExe, $symbolFile)
+            Invoke-HiddenBuild $objcopy @('--strip-debug', $stagedExe)
+            Invoke-HiddenBuild $objcopy @("--add-gnu-debuglink=$symbolFile", $stagedExe)
+        }
         $readme = @'
 The Legend of Zelda - USA/NTSC cycle preview
+
+v1.10.0 adds Seamless Overworld (Experimental), first in Mods under Camera.
+Enable it before PLAY for a continuous camera, neighboring terrain and live
+actors, adaptive Fit to screen and connected dungeon rooms. Mouse wheel changes
+pixel zoom; F4 shows the whole map. It is bundled and disabled by default.
+Caves, stairs and maze puzzles preserve their original portal routing.
+Local play only; cross-room enemy/projectile interactions remain incomplete,
+whole-map simulation is slower, and broader full-game coverage remains open.
+README.md includes real overworld, dungeon and whole-map pictures.
 
 No ROM or third-party HD art is included. Select your stock USA PRG0 ROM,
 payload CRC32 3fe272fb, for every mode. Remastered is a modern Mod in the same
@@ -86,7 +119,7 @@ framework verifies and applies its IPS in memory. Original files stay intact.
 Remastered replacement audio is not implemented; the original NES APU plays.
 
 Arrow keys: D-pad. Z: A. X: B. Enter: Start. Backslash: Select.
-Escape: menu/settings. Hold Tab: fast-forward. F8/F9: cycle save/load state.
+Escape: menu/settings. Hold Tab: fast-forward. F7: state slots. F8: rewind.
 F11: fullscreen. F12: screenshot. Gamepads and remapping are supported.
 Older raw 8 KiB battery progress imports through the launcher SAVE panel.
 Legacy binary save states cannot transfer to this backend. --no-save disables
@@ -116,16 +149,20 @@ mod after testing. See DIAGNOSTICS.md for fallback storage and privacy details.
         Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip
         Write-Host "Created local preview: $zip"
         Write-Host "SHA256: $((Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash)"
-        $pdb = Join-Path $bin "$target.pdb"
-        if (-not (Test-Path -LiteralPath $pdb)) { throw 'Missing matching release PDB for crash diagnosis.' }
         $symbols = Join-Path $out "$target-windows-x64-symbols.zip"
         if (Test-Path -LiteralPath $symbols) { Remove-Item -LiteralPath $symbols }
-        Compress-Archive -LiteralPath $pdb -DestinationPath $symbols
+        Compress-Archive -LiteralPath $symbolFile -DestinationPath $symbols
         Write-Host "Created matching crash symbols: $symbols"
+        if ($splitSymbols) { Remove-Item -LiteralPath $symbolFile -ErrorAction Stop }
     } finally {
         $stageAbsolute = [IO.Path]::GetFullPath($stage)
         $outPrefix = [IO.Path]::GetFullPath($out).TrimEnd('\') + '\'
         if (-not $stageAbsolute.StartsWith($outPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw "Refusing cleanup outside release directory: $stageAbsolute" }
-        Remove-Item -LiteralPath $stageAbsolute -Recurse -Force
+        $contents = @(Get-ChildItem -LiteralPath $stageAbsolute -Recurse -Force)
+        if (((Get-Item -LiteralPath $stageAbsolute).Attributes -band [IO.FileAttributes]::ReparsePoint) -or
+            @($contents | Where-Object { ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $_.Name -in '.git', '.hg', '.svn' }).Count) {
+            throw "Unexpected link or repository in owned release staging: $stageAbsolute"
+        }
+        Remove-Item -LiteralPath $stageAbsolute -Recurse -ErrorAction Stop
     }
 }
