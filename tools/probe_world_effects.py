@@ -6,6 +6,7 @@ from pathlib import Path
 import socket
 import subprocess
 import time
+from PIL import Image
 
 
 def main():
@@ -14,6 +15,7 @@ def main():
         ap.add_argument('--'+n,type=Path,required=True)
     ap.add_argument('--port',type=int,default=27583)
     ap.add_argument('--dungeon',action='store_true')
+    ap.add_argument('--adaptive',action='store_true')
     a=ap.parse_args();a.out.mkdir(parents=True,exist_ok=True)
     env=dict(os.environ,SDL_AUDIODRIVER='dummy',SDL_VIDEODRIVER='dummy',
              SDL_RENDER_DRIVER='software',NESRECOMP_NO_LAUNCHER='1')
@@ -26,9 +28,11 @@ def main():
         kwargs=dict(startupinfo=si,creationflags=subprocess.CREATE_NO_WINDOW)
     results={};transcript=[]
     with (a.out/'game.log').open('w',encoding='utf-8') as log:
-        p=subprocess.Popen([str(a.exe.resolve()),str(a.rom.resolve()),'--hidden','--no-save',
+        args=[str(a.exe.resolve()),str(a.rom.resolve()),'--hidden','--no-save',
             '--tcp',str(a.port),'--config',str(config.resolve()),'--world-view','seamless',
-            '--world-size','768x480'],cwd=a.exe.parent,env=env,stdout=log,stderr=subprocess.STDOUT,**kwargs)
+            ]
+        if not a.adaptive:args+=['--world-size','768x480']
+        p=subprocess.Popen(args,cwd=a.exe.parent,env=env,stdout=log,stderr=subprocess.STDOUT,**kwargs)
         stream=None;sock=None
         try:
             deadline=time.monotonic()+15
@@ -52,7 +56,22 @@ def main():
                     if s['frame']>=start+n:return s
                     time.sleep(.04)
                 raise RuntimeError('frame progress timed out')
+            def ui_picture(name,kind,size):
+                path=(a.out/(name+'.png')).resolve()
+                picture=cmd('screenshot',layer='picture',path=str(path))
+                w=cmd('zelda_world')
+                assert picture['size']==size and w['presentation']==kind,(picture,w)
+                assert w['ui_bounds'][2]>=size[0]*.8,w
+                with Image.open(path) as im:
+                    rgb=im.convert('RGB');pixels=rgb.load()
+                    widest=max(sum(max(pixels[x,y])>40 for x in range(im.width))
+                               for y in range(im.height))
+                # A broad rule/selection must really be drawn, not just reported
+                # as a wide output size around a native page.
+                assert widest>=size[0]*.8,(name,widest,size)
+                return dict(picture=picture,world=w,widest_content_row=widest)
             cmd('menu',open=True);cmd('load_state',path=str(a.state.resolve()))
+            if a.adaptive:cmd('window_size',w=2304,h=1440)
             cmd('screenshot',layer='picture',path=str((a.out/'initial.png').resolve()))
             results['initial']=cmd('zelda_world')
             cmd('menu',open=False);wait_frames(6);cmd('action',name='start',frames=6)
@@ -95,18 +114,47 @@ def main():
                     results['death'].append(w)
                     if len(results['death']) in (1,7,15,35,60):cmd('screenshot',layer='picture',path=str((a.out/f'death-{len(results["death"])}.png').resolve()))
                     assert w['size']==[768,480],w
+                    if w['presentation']=='game-over' and 'game_over_text' not in results:
+                        cmd('menu',open=True)
+                        results['game_over_text']=ui_picture('game-over-text','game-over',[768,480])
+                        cmd('menu',open=False)
                 if died and w['game_mode']==8:
                     wait_frames(25)
-                    results['game_over']=cmd('screenshot',layer='picture',path=str((a.out/'game-over.png').resolve()))
-                    assert results['game_over']['size']==[768,480]
+                    cmd('menu',open=True)
+                    results['game_over']=ui_picture('game-over','continue',[768,480])
+                    cmd('save_state',path=str((a.out/'continue.state').resolve()))
+                    if a.adaptive:
+                        results['continue_resizes']=[]
+                        for width,height in ((3840,720),(600,1200),(2304,1440)):
+                            cmd('window_size',w=width,h=height)
+                            results['continue_resizes'].append(ui_picture(f'continue-{width}x{height}','continue',[width//3,height//3]))
+                    # Exercise the native Select state and resulting highlight.
+                    cmd('menu',open=False);cmd('action',name='select',frames=6);wait_frames(10)
+                    cmd('menu',open=True)
+                    results['save_selected']=ui_picture('save-selected','continue',[768,480])
+                    assert results['save_selected']['world']['submode']==1
+                    cmd('menu',open=False)
+                    for _ in range(2):cmd('action',name='select',frames=6);wait_frames(10)
                     break
             assert died and 'game_over' in results,'native lethal contact/death sequence not observed'
+            assert 'game_over_text' in results,'actual Game Over text phase not tested'
             cmd('action',name='start',frames=6);results['continue']=[];deadline=time.monotonic()+15
             while time.monotonic()<deadline:
                 wait_frames(4);w=cmd('zelda_world');results['continue'].append(w)
                 assert w['size']==[768,480],w
                 if w['game_mode']==5:break
             assert results['continue'][-1]['game_mode']==5,'Continue did not return to gameplay'
+            cmd('menu',open=True);cmd('load_state',path=str((a.out/'continue.state').resolve()))
+            cmd('menu',open=False);wait_frames(8)
+            for _ in range(2):cmd('action',name='select',frames=6);wait_frames(10)
+            assert cmd('zelda_world')['submode']==2,'Retry selection failed'
+            cmd('action',name='start',frames=6);deadline=time.monotonic()+8
+            while time.monotonic()<deadline:
+                wait_frames(5);w=cmd('zelda_world')
+                if w['game_mode'] in (0,1):break
+            assert w['game_mode'] in (0,1) and w['presentation']=='system-ui',w
+            results['retry']=w
+            cmd('screenshot',layer='picture',path=str((a.out/'retry.png').resolve()))
             results['timing']=cmd('zelda_world_timing')
             results['status']='pass'
             cmd('quit');p.wait(timeout=15)

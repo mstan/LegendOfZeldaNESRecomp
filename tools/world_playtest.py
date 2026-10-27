@@ -25,8 +25,13 @@ PAGE = '''<!doctype html><meta charset="utf-8"><title>Zelda seamless playtest</t
 <section><h2>4. HUD, inventory and death fixes</h2><button onclick="load('overworld')">Load bomb/inventory setup</button>
 <p>Place a bomb with X: its flash should cover the full HUD and world. Open and close inventory with Enter: the current expanded scene should slide down and return without changing aspect or jumping to another area.</p><div id="flash"></div><div id="inventory"></div>
 <button onclick="load('death')">Load lethal-contact setup, paused</button><p>Resume: Link starts next to a live enemy with very low health. The enemy must cause the death. The wide view should stay in place through the death fade, Game Over and Continue. Press Enter on Continue.</p><div id="death"></div></section>
+<section><h2>5. Cave/dungeon portals and Game Over</h2>
+<button onclick="load('portal')">Load cave entry, paused</button><button onclick="load('cave')">Load cave interior, paused</button><button onclick="load('dungeon')">Load dungeon entrance, paused</button>
+<p>In the cave, wait for the dialog to finish, then walk down out of the entrance. Walk back up into the cave. The expanded overworld must remain visible during entry/exit; the cave's rock terrain must fill the extra view. In Level 1, walk down to leave the dungeon, then walk back up into it. No smaller 4:3 scene should appear during either portal. Resize wide and tall inside the cave.</p><div id="portals"></div>
+<button onclick="load('continue')">Load Continue choices, paused</button><button onclick="load('death')">Load actual death sequence</button>
+<p>Game Over must appear centered in the window. The Continue/Save/Retry selection row should span the view and adapt when resized. Select changes the native option; Enter activates it. The death setup also exercises the actual Game Over text before these choices.</p><div id="gameover"></div></section>
 <p id="status"></p><script>
-const ids=['overworld','dungeon','combat','flash','inventory','death'];
+const ids=['overworld','dungeon','combat','flash','inventory','death','portals','gameover'];
 for(const id of ids)document.getElementById(id).innerHTML=`<select id="${id}-result"><option>Deferred</option><option>Pass</option><option>Fail</option></select><textarea id="${id}-note" placeholder="Observations or problems"></textarea><button onclick="record('${id}')">Save observation</button>`;
 async function act(body){try{let r=await fetch('/api/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});let j=await r.json();document.getElementById('status').textContent=j.ok?'Saved / ready':j.error;return j}catch(e){document.getElementById('status').textContent=e.message}}
 function load(setup){act({action:'setup',setup})}
@@ -93,7 +98,9 @@ def main():
         (a.folder/'prepared.json').write_text(json.dumps(dict(world=world,slots=list(setups),native_saves_disabled=True),indent=2)+'\n')
         command('quit');p.wait(timeout=10);log.close();print('Prepared states and mod activation passed');return
     notes_path=a.folder/'observations.json'
-    if (a.folder/'setups/death.state').exists():setups['death']=a.folder/'setups/death.state'
+    for name in ('death','portal','cave','continue'):
+        if (a.folder/f'setups/{name}.state').exists():setups[name]=a.folder/f'setups/{name}.state'
+    if 'portal' in setups:command('load_state',path=str(setups['portal'].resolve()))
     notes=json.loads(notes_path.read_text()) if notes_path.exists() else {}
     class Handler(BaseHTTPRequestHandler):
         def reply(self,data,content='application/json',status=200):
@@ -110,7 +117,7 @@ def main():
                 if action=='setup':command('menu',open=True);command('load_state',path=str(setups[req['setup']].resolve()))
                 elif action in ('resume','pause'):command('menu',open=action=='pause')
                 elif action=='record':
-                    assert req['id'] in ('overworld','dungeon','combat','flash','inventory','death') and req['result'] in ('Pass','Fail','Deferred')
+                    assert req['id'] in ('overworld','dungeon','combat','flash','inventory','death','portals','gameover') and req['result'] in ('Pass','Fail','Deferred')
                     notes[req['id']]=dict(result=req['result'],note=req.get('note',''),time=time.strftime('%Y-%m-%dT%H:%M:%S%z'))
                     notes_path.write_text(json.dumps(notes,indent=2)+'\n',encoding='utf-8')
                 else:raise ValueError('Unknown action')

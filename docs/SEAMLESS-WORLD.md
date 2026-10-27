@@ -28,8 +28,12 @@ original transitions. The owner selected preserving puzzle routing with portals.
 Inventory slides over the retained expanded world. HUD backdrops and grayscale
 bomb flashes span the entire viewport. Death retains that world camera, uses
 the native death palette/Link animation, and fades the whole visible area.
-Continue, restart/load and portal pages retain the viewport dimensions with
-centered native UI, so they do not switch the display aspect.
+Portal loaders retain the actual expanded source scene until the destination
+terrain is ready. Cave, shortcut and cellar interiors extend their solid boundary
+tiles across the extra view; native dialog, NPCs and items remain intact. Game
+Over and Continue use the native font in a responsive layout, including a
+window-width selection row. Native title/profile/ending artwork stays usable
+on the adaptive canvas. Original portal timing and puzzle routing remain.
 
 ## Implementation
 
@@ -65,6 +69,7 @@ that a full playthrough or every dungeon has passed.
 | Dungeon ownership | Representative pass | Level 1 membership, native entrance and surrounding actors; other levels unverified |
 | Key door and open corridors | Representative pass | Real supplied key consumed; continuous northward crossing and return; open corridor both ways |
 | Dungeon entrance/exit portals | Passed | Walked through the actual overworld entrance and back to its original source room |
+| Portal scene presentation | Representative pass, owner recheck pending | Expanded source retained during real cave and Level 1 entry/exit; visible pixels checked outside the old native scene rectangle. Cave interior also tested wide/tall. Shortcut caves and cellars implemented, not yet exercised |
 | Adaptive Fit to screen | Passed | Paused and running actual SDL resizing. Actual resizes: 1536x720 -> 512x240, 600x1200 -> 200x400, 3840x720 -> 1280x240 |
 | Full-map presentation/activation | Functional, performance open | 4096x1472; 128 rooms / 579 actors live; approximately 19.4 ms median simulation plus 5.2 ms rendering on this host |
 | Ordinary handoff cost | Representative pass | Final probe: maximum handoff simulation 6.646 ms; simulation p50/p95 2.350/6.354 ms; renderer p50/p95 0.317/0.573 ms. Component timings, not total host frame time |
@@ -73,7 +78,7 @@ that a full playthrough or every dungeon has passed.
 | Native saves | Preserved, coverage open | All QA disables native saves and uses disposable profiles; full normal-save gameplay audit remains |
 | Shutters and block puzzles | Implemented, broad validation open | Native rules and held incoming door masks; remaining puzzle combinations need coverage |
 | Combat and cross-boundary interactions | Partial | Native combat in active room; sword follows Link. Cross-room enemy migration and projectile interactions are incomplete |
-| Death/Continue, inventory and bomb flashes | Representative pass | Owner-reported aspect/scene regressions reproduced and fixed; actual bombs, native lethal enemy contact, death and Continue tested in overworld and Level 1. Owner recheck pending |
+| Death/Continue, inventory and bomb flashes | Representative pass, owner recheck pending | Real bombs and lethal contact in overworld/Level 1; actual Game Over text and Continue choices checked by pixels, ultrawide/portrait resizing, Select, Continue and Retry. Inventory restores the same camera |
 | Secrets, bosses and other retry routes | Unverified | Need representative checks before release |
 | Lost Woods, mountain maze and all warp routes | Routing preserved, unverified | Original portal path retained; puzzle sequences still need explicit tests |
 | Second quest / every dungeon | Unverified | No full-content audit claimed |
@@ -127,8 +132,25 @@ Link beside an existing enemy with low health, without setting a death mode or
 completion flag. The death sequence, Continue page and return to gameplay retain
 the viewport. Camera coordinates before/after inventory match. Background tests
 use disposable profiles, muted output and disabled physical player inputs.
-The owner checklist records flash, inventory and death observations separately.
+The owner checklist records flash, inventory, death, portal presentation and
+Game Over observations separately.
 
 Raster color updates now build only rooms intersecting the camera, so an
 expanded bomb flash does not rebuild distant invisible terrain. Full-map views
 still include every owned room; room simulation/activation rules are unchanged.
+
+The owner subsequently identified boxed cave/dungeon transitions and Game Over
+content inside the correctly sized output. Earlier size-only checks missed this;
+they do not establish expanded scene presentation. `probe-portals-state/results.json`
+now records real cave entry/exit, Level 1 entry/exit, cave resizing, and exact
+picture/camera restoration from states saved during all four portal loaders.
+`probe-portals-ui-final/results.json` and
+`probe-portals-ui-dungeon/results.json` cover the actual Game Over text, native
+Continue selection and window-spanning UI pixels. `probe-portals-seams-final`
+rechecks ordinary crossings and key consumption. Original failures remain
+recorded in `owner-handoff/reported-findings.json`, pending human recheck.
+
+The retained portal source includes CHR, OAM, palette and terrain from before
+the ROM replaces its data tables. It is serialized only during transitional
+modes; normal gameplay states rebuild derived presentation data. This focused
+portal picture check does not clear the separate strict replay timing gate.
