@@ -141,7 +141,7 @@ still include every owned room; room simulation/activation rules are unchanged.
 
 The owner subsequently identified boxed cave/dungeon transitions and Game Over
 content inside the correctly sized output. Earlier size-only checks missed this;
-they do not establish expanded scene presentation. `probe-portals-state/results.json`
+they do not establish expanded scene presentation. `probe-portals-verified/results.json`
 now records real cave entry/exit, Level 1 entry/exit, cave resizing, and exact
 picture/camera restoration from states saved during all four portal loaders.
 `probe-portals-ui-final/results.json` and
@@ -154,3 +154,11 @@ The retained portal source includes CHR, OAM, palette and terrain from before
 the ROM replaces its data tables. It is serialized only during transitional
 modes; normal gameplay states rebuild derived presentation data. This focused
 portal picture check does not clear the separate strict replay timing gate.
+
+The ROM changes `CurLevel` while Link is still walking into an entrance, before
+loading destination tables. The retained source keeps its original level
+identity. Relabeling it early can mix overworld room instances into a dungeon
+after a loading-state restore. The portal probe now checks source/cache identity
+throughout loading and compares untouched destination neighbors with the native
+isolated decoder after both dungeon entry and exit. The visual review caught
+this defect before the owner handoff; earlier portal screenshots are superseded.

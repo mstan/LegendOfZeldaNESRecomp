@@ -19,7 +19,7 @@ def main():
              SDL_RENDER_DRIVER='software',NESRECOMP_NO_LAUNCHER='1')
     for key in ('APPDATA','LOCALAPPDATA','TEMP','TMP'):
         d=a.out/key.lower();d.mkdir(exist_ok=True);env[key]=str(d.resolve())
-    config=a.out/'config.ini';config.write_text('[Display]\nFullscreen=0\nVSync=0\n[Audio]\nEnabled=1\nVolume=0\n',encoding='utf-8')
+    config=a.out/'config.ini';config.write_text('[Display]\nFullscreen=0\nVSync=0\n[Audio]\nEnabled=1\nVolume=0\n[Input]\nPlayer1Source=0\nPlayer2Source=0\n',encoding='utf-8')
     kwargs={}
     if os.name=='nt':
         si=subprocess.STARTUPINFO();si.dwFlags|=subprocess.STARTF_USESHOWWINDOW;si.wShowWindow=0

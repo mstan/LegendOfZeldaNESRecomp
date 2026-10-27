@@ -98,6 +98,7 @@ def main():
                     assert w['size'] == [768, 480], w
                     assert w['presentation'] in ('world', 'world-walk', 'subroom',
                                                  'subroom-walk', 'portal-retained'), w
+                    assert w['scene_level'] == w['level'], ('Source cache relabeled as destination', w)
                     if key != last:
                         samples.append(shot(f'{name}-{len(samples):02d}'))
                         last = key
@@ -175,11 +176,18 @@ def main():
             results['dungeon'] = shot('dungeon-interior')
             assert results['dungeon']['world']['scene_level'] == 1
             assert results['dungeon']['outside_native_scene_pixels'] > 500
+            results['dungeon_neighbor_decoder'] = cmd('zelda_world_probe', room=0x63)
+            assert all(results['dungeon_neighbor_decoder'][k] for k in
+                       ('cached_interior_exact', 'cached_attrs_exact', 'machine_state_unchanged'))
             cmd('zelda_world_teleport', room=0x73, x=120, y=213)
             cmd('menu', open=False)
             cmd('action', name='down', frames=70)
             monitor('dungeon-exit', lambda w: w['game_mode'] == 5 and w['scene_level'] == 0)
             assert cmd('zelda_state')['room'] == 0x37
+            cmd('menu', open=True)
+            results['overworld_neighbor_decoder'] = cmd('zelda_world_probe', room=0x36)
+            assert all(results['overworld_neighbor_decoder'][k] for k in
+                       ('cached_tiles_exact', 'cached_attrs_exact', 'machine_state_unchanged'))
             assert cmd('zelda_world')['failures'] == 0
             results['status'] = 'pass'
             cmd('quit')

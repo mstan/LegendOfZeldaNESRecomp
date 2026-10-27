@@ -456,7 +456,13 @@ const uint32_t *zelda_world_present(int *width,int *height) {
     } else if(local_ready) {
         capture_scene(true,native);presentation="subroom";
     } else if(scene_valid&&(game_mode==6||game_mode==0x10||game_mode==0x12)) {
-        capture_scene(scene_local,native);presentation=scene_local?"subroom-walk":"world-walk";
+        /* Stairs set CurLevel to the destination before its tables/CHR are
+         * loaded. Update the walking sprite, never relabel the source cache
+         * with that destination identity (including across save/load). */
+        scene_link_x=cyc_mod_peek(0x70);scene_link_y=cyc_mod_peek(0x84);
+        memcpy(scene_oam,cyc_cpu_ram()+0x200,sizeof scene_oam);
+        memcpy(scene_native,native,sizeof scene_native);
+        presentation=scene_local?"subroom-walk":"world-walk";
     } else presentation="portal-retained";
     if(!scene_valid)return NULL;
     unsigned room=scene_room;
@@ -568,24 +574,36 @@ static void world_timing(int id,const char *line) {
     if(reset){step_count=render_count=0;handoff_max_us=0;}
 }
 static void world_probe(int id,const char *line) {
-    (void)line;
     uint8_t *before=NULL,*after=NULL;size_t nb=0,na=0;char err[256];
+    long requested=cyc_mod_peek(0xeb);cyc_tcp_long(line,"room",&requested);
+    if(requested<0||requested>=ROOMS){cyc_tcp_err(id,"room0..127");return;}
     bool saved=cyc_state_save(&before,&nb,err,sizeof err);
-    bool decoded_ok=false, tiles_exact=false, attrs_exact=false;
+    bool decoded_ok=false, tiles_exact=false, attrs_exact=false,cached_tiles=false,cached_attrs=false,cached_interior=false;
+    unsigned mismatches=0;
     if(saved && zelda_world_supported() && cyc_mod_peek(0x12)==5) {
-        unsigned room=cyc_mod_peek(0xeb);
+        unsigned room=(unsigned)requested;
         WorldRoom temporary={0};decoded_ok=decode_to(room,&temporary);
         if(decoded_ok) {
             tiles_exact=attrs_exact=true;
             for(int i=0;i<TILES;i++)if(temporary.tiles[i]!=cyc_mod_peek((uint16_t)(0x6530+i)))tiles_exact=false;
             for(int i=0;i<48;i++)if(temporary.attrs[i]!=cyc_mod_peek((uint16_t)(0x530+i)))attrs_exact=false;
+            cached_tiles=rooms[room].valid&&!memcmp(temporary.tiles,rooms[room].tiles,TILES);
+            cached_attrs=rooms[room].valid&&!memcmp(temporary.attrs,rooms[room].attrs,48);
+            cached_interior=rooms[room].valid;
+            for(unsigned x=0;x<32;x++)for(unsigned y=0;y<22;y++)
+                if(temporary.tiles[x*22+y]!=rooms[room].tiles[x*22+y]) {
+                    mismatches++;
+                    /* A live room can hold a doorway open with its transient
+                     * mask, which the static decoder intentionally lacks. */
+                    if(x>=4&&x<28&&y>=4&&y<18)cached_interior=false;
+                }
         }
     }
     bool saved_after=saved && cyc_state_save(&after,&na,err,sizeof err);
     bool unchanged=saved_after && nb==na && !memcmp(before,after,nb);
     free(before);free(after);
-    char out[512];snprintf(out,sizeof out,"\"decoded\":%s,\"live_tiles_exact\":%s,\"live_attrs_exact\":%s,\"machine_state_unchanged\":%s",
-        decoded_ok?"true":"false",tiles_exact?"true":"false",attrs_exact?"true":"false",unchanged?"true":"false");
+    char out[512];snprintf(out,sizeof out,"\"room\":%ld,\"decoded\":%s,\"live_tiles_exact\":%s,\"live_attrs_exact\":%s,\"cached_tiles_exact\":%s,\"cached_interior_exact\":%s,\"cached_tile_mismatches\":%u,\"cached_attrs_exact\":%s,\"machine_state_unchanged\":%s",
+        requested,decoded_ok?"true":"false",tiles_exact?"true":"false",attrs_exact?"true":"false",cached_tiles?"true":"false",cached_interior?"true":"false",mismatches,cached_attrs?"true":"false",unchanged?"true":"false");
     cyc_tcp_ok(id,out);
 }
 void zelda_world_tcp_setup(void) {
