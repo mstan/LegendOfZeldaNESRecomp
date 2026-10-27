@@ -34,6 +34,15 @@ implemented. The TCP `zelda_world` response exposes these gaps explicitly.
 `zelda_world_probe` compares a decoded room with the live tile/attribute planes
 and compares complete serialized machine state before/after the isolated call.
 
+Initial validation: all 128 overworld rooms decoded with zero call failures;
+starting-room tiles/attributes and full machine isolation passed. A matched
+60-frame input replay retained identical native trace/hardware/picture hashes
+and audio with the world view enabled or disabled. Actual hidden SDL resizes
+to 1536x720, 600x1200 and 3840x720 produced world pictures of 512x240, 200x400
+and 1280x240, including a viewport beyond the ordinary 32:9 width limit. The
+4096x1472 atlas and 768x480 following view were visually inspected. These
+checks establish this terrain slice only, not the remaining gameplay gates.
+
 ## Implementation decisions and remaining gates
 
 1. Verify original decoder output and continuous camera against actual ROM

@@ -18,6 +18,7 @@ def main():
     ap.add_argument('--state', type=Path, required=True)
     ap.add_argument('--out', type=Path, required=True)
     ap.add_argument('--port', type=int, default=27581)
+    ap.add_argument('--adaptive', action='store_true')
     args = ap.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, SDL_AUDIODRIVER='dummy', SDL_VIDEODRIVER='dummy',
@@ -36,10 +37,13 @@ def main():
         kwargs.update(startupinfo=si, creationflags=subprocess.CREATE_NO_WINDOW)
     results = {}
     with (args.out / 'game.log').open('w', encoding='utf-8') as log:
-        p = subprocess.Popen([str(args.exe.resolve()), str(args.rom.resolve()),
+        command = [str(args.exe.resolve()), str(args.rom.resolve()),
                               '--hidden', '--no-save', '--tcp', str(args.port),
                               '--config', str(config.resolve()),
-                              '--world-view', 'follow', '--world-size', '768x480'],
+                              '--world-view', 'follow']
+        if not args.adaptive:
+            command += ['--world-size', '768x480']
+        p = subprocess.Popen(command,
                              cwd=args.exe.parent, env=env, stdout=log,
                              stderr=subprocess.STDOUT, **kwargs)
         stream = None
@@ -70,12 +74,27 @@ def main():
             results['probe'] = cmd('zelda_world_probe')
             results['picture'] = cmd('screenshot', layer='picture', path=str((args.out/'follow.png').resolve()))
             results['world'] = cmd('zelda_world')
+            if args.adaptive:
+                cmd('menu', open=False)
+                results['resizes'] = []
+                for w, h in [(1536,720), (600,1200), (3840,720)]:
+                    cmd('window_size', w=w, h=h)
+                    expected = [w//3, h//3]
+                    deadline = time.monotonic()+3
+                    while time.monotonic() < deadline:
+                        shot = cmd('screenshot', layer='picture', path=str((args.out/f'resize-{w}x{h}.png').resolve()))
+                        if shot['size'] == expected:
+                            break
+                        time.sleep(.05)
+                    assert shot['size'] == expected, (expected, shot)
+                    results['resizes'].append(shot)
             cmd('quit')
             p.wait(timeout=10)
             assert p.returncode == 0, p.returncode
             assert all(results['probe'][k] for k in ('decoded', 'live_tiles_exact',
                         'live_attrs_exact', 'machine_state_unchanged')), results['probe']
-            assert results['picture']['size'] == [768, 480], results['picture']
+            if not args.adaptive:
+                assert results['picture']['size'] == [768, 480], results['picture']
             assert results['world']['decoded'] >= 128 and results['world']['failures'] == 0
             results['status'] = 'pass'
         finally:
