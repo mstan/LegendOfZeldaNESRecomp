@@ -12,6 +12,7 @@
 #include "keybinds.h"
 #ifdef ZELDA_CYCLE
 #include "cycle_bridge.h"
+#include "cyc_video.h"
 #else
 #include "nes_runtime.h"
 #endif
