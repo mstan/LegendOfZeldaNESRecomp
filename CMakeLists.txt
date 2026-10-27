@@ -40,7 +40,7 @@ if(NESRECOMP_BACKEND STREQUAL "cycle")
             CAPTURE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/cyc_captures_${VARIANT}.txt"
             MODS HD_PACKS GAME_ID "legend-of-zelda-us" PLAYERS 1 REGION NTSC
             BOXART "${CMAKE_CURRENT_SOURCE_DIR}/boxart.tga"
-            HOST_EXTRAS cyc_extras.c zelda_voxel.c mods/zelda_voxel_plugin.c
+            HOST_EXTRAS cyc_extras.c zelda_voxel.c zelda_world.c mods/zelda_voxel_plugin.c
                 "${NESRECOMP_ROOT}/runner/cyc/cyc_presentation.c"
                 "${NESRECOMP_ROOT}/runner/src/voxel_renderer.c"
                 "${NESRECOMP_ROOT}/runner/src/voxel_screen_profile.c"

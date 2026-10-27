@@ -6,6 +6,7 @@
 #include "cyc_tcp.h"
 #include "cycle_bridge.h"
 #include "zelda_voxel.h"
+#include "zelda_world.h"
 #include "keybinds.h"
 #include "mod_runtime.h"
 #if defined(NESRECOMP_CYCLE_HDPACK) && !defined(NESRECOMP_CYCLE_HDPACK_MODS)
@@ -22,6 +23,7 @@ static void power_on(void *ctx) {
     snprintf(path,sizeof path,"%sLegendOfZeldaNESRecomp.exe",base?base:"");SDL_free(base);
     keybinds_init_readonly(path);
     zelda_voxel_init();
+    zelda_world_reset();
 #if defined(NESRECOMP_CYCLE_HDPACK) && !defined(NESRECOMP_CYCLE_HDPACK_MODS)
     cyc_hdpack_power_on();
 #endif
@@ -37,6 +39,7 @@ static void event(void *ctx, const void *ev, int player) {
     (void)ctx;
     cyc_presentation_event((const SDL_Event *)ev,player);
     zelda_voxel_handle_event((const SDL_Event *)ev);
+    zelda_world_event((const SDL_Event *)ev);
 }
 static void frame_end(void *ctx) {
     (void)ctx;
@@ -45,10 +48,16 @@ static void frame_end(void *ctx) {
     memcpy(picture,native,(size_t)width*height*sizeof(*picture));
     zelda_voxel_post_render(picture);
 }
+static void state_loaded(void *ctx) {
+    (void)ctx;
+    zelda_world_reset();
+}
 static const uint32_t *present(void *ctx,int *width,int *height) {
     /* Rebuild after a load as well. The profile's stable-room cache is part
      * of its validated save record, so room transitions resume unchanged. */
     frame_end(ctx);
+    const uint32_t *world=zelda_world_present(width,height);
+    if(world)return world;
 #if defined(NESRECOMP_CYCLE_HDPACK) && !defined(NESRECOMP_CYCLE_HDPACK_MODS)
     return cyc_hdpack_present(picture,width,height);
 #endif
@@ -56,7 +65,8 @@ static const uint32_t *present(void *ctx,int *width,int *height) {
     return picture;
 }
 static bool option(void *ctx,const char *name,const char *value) {
-    (void)ctx;(void)name;
+    (void)ctx;
+    if(!strncmp(name,"--world-",8))return zelda_world_option(name,value);
 #ifdef NESRECOMP_CYCLE_HDPACK_MODS
     if(nes_mod_hd_pack() && strcmp(value,"stock")) {
         fprintf(stderr,"HD textures and voxel views require separate display selections\n");return false;
@@ -100,8 +110,11 @@ static void tcp_setup(void *ctx) {
     (void)ctx;cyc_tcp_register("zelda_state","Guest state and voxel view",state);
     cyc_tcp_register("entity_snapshot","Original Zelda entity slots",entities);
     cyc_tcp_register("entity_slot","Detailed original entity slot",entity);
+    zelda_world_tcp_setup();
 }
 static const CycHostOption options[]={
+    {"--world-view",true,"Development terrain camera: off, follow or atlas"},
+    {"--world-size",true,"Development world viewport WxH (128..4096 x 128..2048)"},
     {"--voxel",true,"stock, diorama or first-person"},
 #if defined(NESRECOMP_CYCLE_HDPACK) && !defined(NESRECOMP_CYCLE_HDPACK_MODS)
     {"--hdpack",true,"Remastered texture pack directory, or off"},
@@ -109,6 +122,6 @@ static const CycHostOption options[]={
 };
 const CycHostExtras *cyc_host_extras(void) {
     static const CycHostExtras extras={.present=present,.power_on=power_on,.frame_end=frame_end,
-        .input=input,.event=event,.options=options,.option_count=sizeof(options)/sizeof(options[0]),.option=option,.tcp_setup=tcp_setup};
+        .input=input,.event=event,.options=options,.option_count=sizeof(options)/sizeof(options[0]),.option=option,.tcp_setup=tcp_setup,.state_loaded=state_loaded};
     return &extras;
 }
