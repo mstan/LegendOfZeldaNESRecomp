@@ -4,6 +4,14 @@ output_prefix = "zelda_stock"
 console = "nes"
 cycle_accurate = true
 
+# Original startup copy, also documented by the legacy backend. Generation
+# reads the input ROM; runtime requires matching bytes in stable visible SRAM.
+[[sram_map]]
+sram_start = 0x6C90
+rom_start = 0xA500
+bank = 1
+size = 0x1370
+
 [[mod_function_hook]]
 id = "zelda.world.edge"
 addr = 0xF161
