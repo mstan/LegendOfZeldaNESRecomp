@@ -9,6 +9,7 @@
  */
 #include "zelda_world_internal.h"
 #include "cyc_core.h"
+#include "cyc_render.h"
 #include "cyc_mod.h"
 #include "cyc_tcp.h"
 #include "mod_function_hooks.h"
@@ -370,6 +371,8 @@ static void teleport(int id,const char *line) {
     bool fragile=false;cyc_tcp_bool(line,"fragile",&fragile);
     if(fragile){poke(0x66f,0);poke(0x670,1);poke(0x4f0,0);}
     previous_room=(int)room;previous_x=(int)x;previous_y=(int)y;
+    /* QA placement commits guest data while paused, outside a core frame. */
+    cyc_render_frame_done();
     cyc_tcp_ok(id,"\"qa_teleport\":true");
 }
 static void room_state(int id,const char *line) {

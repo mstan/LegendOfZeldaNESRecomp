@@ -13,6 +13,7 @@
 #ifdef ZELDA_CYCLE
 #include "cycle_bridge.h"
 #include "cyc_video.h"
+#include "cyc_render.h"
 #else
 #include "nes_runtime.h"
 #endif
@@ -515,6 +516,9 @@ static int prepare_transition_scene(NesVoxelScene *scene) {
 }
 
 void zelda_voxel_set_mod_enabled(int enabled) {
+#ifdef ZELDA_CYCLE
+    cyc_render_frame_done();
+#endif
     if (!enabled)
         restore_first_person_input();
     s_mod_enabled = enabled != 0;
@@ -530,6 +534,9 @@ void zelda_voxel_set_mod_enabled(int enabled) {
 void zelda_voxel_configure_mod(int first_person,
                                int pitch, int yaw, int roll,
                                int zoom_percent, int sprite_scale_percent) {
+#ifdef ZELDA_CYCLE
+    cyc_render_frame_done();
+#endif
     restore_first_person_input();
     s_first_person = first_person != 0;
     s_first_person_heading_initialized = 0;
@@ -553,6 +560,7 @@ void zelda_voxel_configure_mod(int first_person,
 
 void zelda_voxel_init(void) {
 #ifdef ZELDA_CYCLE
+    cyc_render_frame_done();
     cyc_video_request_width(s_mod_enabled ? ZELDA_OUTPUT_WIDTH : 256);
     cyc_presentation_sync();
 #endif
