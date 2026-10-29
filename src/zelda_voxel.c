@@ -516,6 +516,7 @@ static int prepare_transition_scene(NesVoxelScene *scene) {
 }
 
 void zelda_voxel_set_mod_enabled(int enabled) {
+    nes_voxel_retained_forget();
 #ifdef ZELDA_CYCLE
     cyc_render_frame_done();
 #endif
@@ -559,6 +560,7 @@ void zelda_voxel_configure_mod(int first_person,
 }
 
 void zelda_voxel_init(void) {
+    nes_voxel_retained_forget();
 #ifdef ZELDA_CYCLE
     cyc_render_frame_done();
     cyc_video_request_width(s_mod_enabled ? ZELDA_OUTPUT_WIDTH : 256);
@@ -1123,7 +1125,7 @@ void zelda_voxel_post_render(uint32_t *framebuffer) {
     configure_scene_backdrop(&scene);
     if (s_first_person)
         configure_first_person_camera(&scene);
-    if (nes_voxel_render(&scene)) {
+    if (nes_voxel_render_retained(&scene)) {
         if (world_unfurl_active())
             fade_unfurl_from_black(framebuffer);
         memcpy(s_stable_frame, framebuffer, sizeof(s_stable_frame));
@@ -1295,6 +1297,7 @@ static int voxel_validate(const uint8_t *buf,int len) {
 }
 static int voxel_load(const uint8_t *buf,int len) {
     if(!voxel_validate(buf,len))return 0;
+    nes_voxel_retained_forget();
     ZeldaVoxelCycleState *state=malloc(sizeof(*state));if(!state)return 0;memcpy(state,buf,sizeof(*state));
     memcpy(&s_heights,&state->s_heights,sizeof s_heights);
     memcpy(&s_classification,&state->s_classification,sizeof s_classification);

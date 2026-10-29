@@ -48,7 +48,7 @@ if(NESRECOMP_BACKEND STREQUAL "cycle")
         target_include_directories(${TARGET} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
         target_compile_definitions(${TARGET} PRIVATE ZELDA_CYCLE NESRECOMP_CYCLE_PRESENTATION
               NESRECOMP_HDPACK_LAYER_PLANS=1 NESRECOMP_NATIVE_PRG_GUARDS=1
-              NESRECOMP_ISOLATED_NATIVE=1)
+              NESRECOMP_ISOLATED_NATIVE=1 NESRECOMP_VOXEL_RETAINED_TERRAIN=1)
         if(MSVC)
             # Keep an optimized release while retaining its matching crash symbols.
             target_compile_options(${TARGET} PRIVATE /Zi)

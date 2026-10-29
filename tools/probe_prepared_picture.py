@@ -20,6 +20,7 @@ def main():
     ap.add_argument('--advanced-state', type=Path)
     ap.add_argument('--view', choices=('world', 'diorama', 'first-person', 'stock', 'hd'), required=True)
     ap.add_argument('--require-reuse', action='store_true')
+    ap.add_argument('--require-terrain', action='store_true')
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, SDL_AUDIODRIVER='dummy', SDL_VIDEODRIVER='dummy',
@@ -126,6 +127,18 @@ def main():
                 assert shot('advanced-return') == initial
                 ask('load_state', path=str(a.advanced_state.resolve()))
                 assert shot('advanced-reload') == advanced
+            if a.require_terrain:
+                before_live=ask('state')
+                ask('menu',open=False)
+                deadline=time.monotonic()+15
+                while ask('state')['frame']<before_live['frame']+20:
+                    assert time.monotonic()<deadline,'gameplay did not advance'
+                    time.sleep(.03)
+                ask('menu',open=True)
+                live=ask('zelda_presentation')
+                assert live['terrain_builds']>0 and live['terrain_hits']>0,live
+                assert 0<live['terrain_bytes']<=36*1024*1024,live
+                results['live_terrain_reuse']=dict(before=before_live,after=ask('state'),cache=live)
             results['final_state'] = ask('state')
             ask('quit')
             p.wait(timeout=10)
