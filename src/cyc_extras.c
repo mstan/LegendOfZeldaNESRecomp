@@ -16,8 +16,15 @@
 #include <stdio.h>
 
 static uint32_t picture[CYC_VIDEO_MAX_WIDTH * 240];
+/* Frame-end owns preparation; present consumes the same owned picture. Core
+ * revisions cover completed frames and loads, while host input/events/options
+ * can change the view without advancing the guest. Never serialize this cache. */
+static bool picture_valid;
+static uint64_t picture_generation,picture_builds,picture_hits;
+static int picture_video_width,picture_width=256;
 static void power_on(void *ctx) {
     (void)ctx;
+    picture_valid=false;picture_builds=picture_hits=0;
     cyc_presentation_sync();
     char path[1024];char *base=SDL_GetBasePath();
     snprintf(path,sizeof path,"%sLegendOfZeldaNESRecomp.exe",base?base:"");SDL_free(base);
@@ -30,6 +37,7 @@ static void power_on(void *ctx) {
 }
 static void input(void *ctx, uint8_t buttons[2]) {
     (void)ctx;
+    picture_valid=false;
     cyc_presentation_sync();
     g_controller1_buttons=buttons[0];
     zelda_voxel_update_hotkey();
@@ -37,36 +45,46 @@ static void input(void *ctx, uint8_t buttons[2]) {
 }
 static void event(void *ctx, const void *ev, int player) {
     (void)ctx;
+    picture_valid=false;
     cyc_presentation_event((const SDL_Event *)ev,player);
     zelda_voxel_handle_event((const SDL_Event *)ev);
     zelda_world_event((const SDL_Event *)ev);
 }
 static void frame_end(void *ctx) {
     (void)ctx;
+    uint64_t generation=cyc_render_generation();
+    int video_width=cyc_video_width();
+    if(picture_valid && picture_generation==generation && picture_video_width==video_width) {
+        picture_hits++;return;
+    }
     zelda_world_frame_end();
     cyc_presentation_sync();
     int width,height;const uint32_t *native=cyc_render_present(&width,&height);
     memcpy(picture,native,(size_t)width*height*sizeof(*picture));
     zelda_voxel_post_render(picture);
+    picture_width=width;picture_video_width=cyc_video_width();
+    picture_generation=cyc_render_generation();picture_valid=true;picture_builds++;
 }
 static void state_loaded(void *ctx) {
     (void)ctx;
+    picture_valid=false;
     zelda_world_state_loaded();
 }
 static const uint32_t *present(void *ctx,int *width,int *height) {
-    /* Rebuild after a load as well. The profile's stable-room cache is part
-     * of its validated save record, so room transitions resume unchanged. */
+    /* Rebuild only if the core or presentation state changed since preparation.
+     * State loads always discard this derived picture. */
     frame_end(ctx);
     const uint32_t *world=zelda_world_present(width,height);
     if(world)return world;
 #if defined(NESRECOMP_CYCLE_HDPACK) && !defined(NESRECOMP_CYCLE_HDPACK_MODS)
     return cyc_hdpack_present(picture,width,height);
 #endif
-    *width=g_render_width;*height=240;
+    *width=picture_width;*height=240;
     return picture;
 }
 static bool option(void *ctx,const char *name,const char *value) {
     (void)ctx;
+    picture_valid=false;
     if(!strncmp(name,"--world-",8))return zelda_world_option(name,value);
 #ifdef NESRECOMP_CYCLE_HDPACK_MODS
     if(nes_mod_hd_pack() && strcmp(value,"stock")) {
@@ -107,10 +125,18 @@ static void entity(int id,const char *line) {
     snprintf(out,sizeof out,"\"frame\":%llu,\"slot\":%ld,\"type\":\"0x%02X\",\"x\":%u,\"y\":%u,\"dir\":%u,\"state\":\"0x%02X\",\"meta\":%u,\"timer\":%u,\"uninit\":\"0x%02X\",\"stun_cycle\":%u,\"paused\":%u,\"menu_state\":%u,\"mode\":%u,\"sub\":%u",
         (unsigned long long)g_frame_count,slot,g_ram[0x34f+slot],g_ram[0x70+slot],g_ram[0x84+slot],g_ram[0x98+slot],g_ram[0xac+slot],g_ram[0x405+slot],g_ram[0x28+slot],g_ram[0x492+slot],g_ram[0x26],g_ram[0xe0],g_ram[0xe1],g_ram[0x12],g_ram[0x11]);cyc_tcp_ok(id,out);
 }
+static void presentation_state(int id,const char *line) {
+    (void)line;char out[300];
+    snprintf(out,sizeof out,"\"valid\":%s,\"builds\":%llu,\"hits\":%llu,\"generation\":%llu,\"core_generation\":%llu,\"width\":%d",
+        picture_valid?"true":"false",(unsigned long long)picture_builds,(unsigned long long)picture_hits,
+        (unsigned long long)picture_generation,(unsigned long long)cyc_render_generation(),picture_width);
+    cyc_tcp_ok(id,out);
+}
 static void tcp_setup(void *ctx) {
     (void)ctx;cyc_tcp_register("zelda_state","Guest state and voxel view",state);
     cyc_tcp_register("entity_snapshot","Original Zelda entity slots",entities);
     cyc_tcp_register("entity_slot","Detailed original entity slot",entity);
+    cyc_tcp_register("zelda_presentation","Prepared picture revisions and reuse counters",presentation_state);
     zelda_world_tcp_setup();
 }
 static const CycHostOption options[]={
