@@ -9,6 +9,7 @@
 #include "zelda_world.h"
 #include "keybinds.h"
 #include "mod_runtime.h"
+#include "voxel_renderer.h"
 #if defined(NESRECOMP_CYCLE_HDPACK) && !defined(NESRECOMP_CYCLE_HDPACK_MODS)
 #include "cyc_hdpack.h"
 #endif
@@ -126,10 +127,14 @@ static void entity(int id,const char *line) {
         (unsigned long long)g_frame_count,slot,g_ram[0x34f+slot],g_ram[0x70+slot],g_ram[0x84+slot],g_ram[0x98+slot],g_ram[0xac+slot],g_ram[0x405+slot],g_ram[0x28+slot],g_ram[0x492+slot],g_ram[0x26],g_ram[0xe0],g_ram[0xe1],g_ram[0x12],g_ram[0x11]);cyc_tcp_ok(id,out);
 }
 static void presentation_state(int id,const char *line) {
-    (void)line;char out[300];
-    snprintf(out,sizeof out,"\"valid\":%s,\"builds\":%llu,\"hits\":%llu,\"generation\":%llu,\"core_generation\":%llu,\"width\":%d",
+    (void)line;char out[512];
+    uint64_t terrain_builds=0,terrain_hits=0;
+    nes_voxel_retained_stats(&terrain_builds,&terrain_hits);
+    snprintf(out,sizeof out,"\"valid\":%s,\"builds\":%llu,\"hits\":%llu,\"generation\":%llu,\"core_generation\":%llu,\"width\":%d,\"terrain_builds\":%llu,\"terrain_hits\":%llu,\"terrain_bytes\":%llu",
         picture_valid?"true":"false",(unsigned long long)picture_builds,(unsigned long long)picture_hits,
-        (unsigned long long)picture_generation,(unsigned long long)cyc_render_generation(),picture_width);
+        (unsigned long long)picture_generation,(unsigned long long)cyc_render_generation(),picture_width,
+        (unsigned long long)terrain_builds,(unsigned long long)terrain_hits,
+        (unsigned long long)nes_voxel_retained_bytes());
     cyc_tcp_ok(id,out);
 }
 static void tcp_setup(void *ctx) {
