@@ -1196,6 +1196,10 @@ typedef struct {
 _Static_assert(sizeof(ZeldaVoxelCycleState) <= NES_MOD_SAVESTATE_BLOB_CAP, "voxel record size");
 int zelda_voxel_cycle_mode(void) {return !s_mod_enabled?0:s_first_person?2:1;}
 static int voxel_save(uint8_t *buf,int cap) {
+    /* A disabled presentation has no state to restore. In particular, do not
+     * persist the last voxel mode/preset after switching to stock or seamless:
+     * those dormant values differ from a fresh process's defaults. */
+    if(!s_mod_enabled)return 0;
     if(cap<(int)sizeof(ZeldaVoxelCycleState))return -1;
     ZeldaVoxelCycleState *state=calloc(1,sizeof(*state));if(!state)return -1;state->version=1;
     memcpy(&state->s_heights,&s_heights,sizeof s_heights);
@@ -1248,7 +1252,9 @@ static int voxel_save(uint8_t *buf,int cap) {
     memcpy(buf,state,sizeof(*state));free(state);return sizeof(ZeldaVoxelCycleState);
 }
 static int voxel_check(const ZeldaVoxelCycleState *state) {
-    if(state->version!=1 || state->s_mod_enabled!=s_mod_enabled || state->s_first_person!=s_first_person)return 0;
+    if(state->version!=1 || state->s_mod_enabled!=s_mod_enabled)return 0;
+    if(state->s_first_person<0 || state->s_first_person>1)return 0;
+    if(s_mod_enabled && state->s_first_person!=s_first_person)return 0;
     if(state->s_view_enabled<0 || state->s_view_enabled>1)return 0;
     if(state->s_room_snapshot_valid<0 || state->s_room_snapshot_valid>1)return 0;
     if(state->s_stable_frame_valid<0 || state->s_stable_frame_valid>1)return 0;
@@ -1256,11 +1262,13 @@ static int voxel_check(const ZeldaVoxelCycleState *state) {
     if(state->s_exit_loading<0 || state->s_exit_loading>1)return 0;
     if(state->s_first_person_heading_initialized<0 || state->s_first_person_heading_initialized>1)return 0;
     if(state->s_first_person_input_overridden<0 || state->s_first_person_input_overridden>1)return 0;
-    if(state->s_default_pitch!=s_default_pitch)return 0;
-    if(state->s_default_yaw!=s_default_yaw)return 0;
-    if(state->s_default_roll!=s_default_roll)return 0;
-    if(state->s_default_zoom!=s_default_zoom)return 0;
-    if(state->s_default_sprite_scale!=s_default_sprite_scale)return 0;
+    if(s_mod_enabled) {
+        if(state->s_default_pitch!=s_default_pitch)return 0;
+        if(state->s_default_yaw!=s_default_yaw)return 0;
+        if(state->s_default_roll!=s_default_roll)return 0;
+        if(state->s_default_zoom!=s_default_zoom)return 0;
+        if(state->s_default_sprite_scale!=s_default_sprite_scale)return 0;
+    }
     if(state->s_transition_columns<0 || state->s_transition_columns>ZELDA_TRANSITION_COLUMNS || state->s_transition_rows<0 || state->s_transition_rows>ZELDA_TRANSITION_ROWS)return 0;
     for(size_t i=0;i<sizeof(state->s_heights)/sizeof(float);i++)if(!isfinite(state->s_heights[i]))return 0;
     for(size_t i=0;i<sizeof(state->s_room_heights)/sizeof(float);i++)if(!isfinite(state->s_room_heights[i]))return 0;
@@ -1282,11 +1290,18 @@ static int voxel_check(const ZeldaVoxelCycleState *state) {
     return 1;
 }
 static int voxel_validate(const uint8_t *buf,int len) {
+    if(!len)return !s_mod_enabled;
     if(!buf || len!=(int)sizeof(ZeldaVoxelCycleState))return 0;
     ZeldaVoxelCycleState *state=malloc(sizeof(*state));if(!state)return 0;memcpy(state,buf,sizeof(*state));int ok=voxel_check(state);free(state);return ok;
 }
 static int voxel_load(const uint8_t *buf,int len) {
     if(!voxel_validate(buf,len))return 0;
+    if(!s_mod_enabled) {
+        /* Accept an existing disabled record as well, but discard its dormant
+         * camera settings. The next activation supplies its own configuration. */
+        zelda_voxel_set_mod_enabled(0);
+        return 1;
+    }
     ZeldaVoxelCycleState *state=malloc(sizeof(*state));if(!state)return 0;memcpy(state,buf,sizeof(*state));
     memcpy(&s_heights,&state->s_heights,sizeof s_heights);
     memcpy(&s_classification,&state->s_classification,sizeof s_classification);

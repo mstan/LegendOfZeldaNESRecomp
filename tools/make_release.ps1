@@ -103,6 +103,10 @@ foreach ($target in $variants) {
         $readme = @'
 The Legend of Zelda - USA/NTSC cycle preview
 
+v1.10.1 fixes save-state loading after switching from voxel views to stock or
+Seamless Overworld. Disabled voxel camera settings no longer block a load.
+Active voxel states still require the matching voxel mode and camera preset.
+
 v1.10.0 adds Seamless Overworld (Experimental), first in Mods under Camera.
 Enable it before PLAY for a continuous camera, neighboring terrain and live
 actors, adaptive Fit to screen and connected dungeon rooms. Mouse wheel changes

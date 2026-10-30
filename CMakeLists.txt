@@ -3,7 +3,7 @@ project(LegendOfZeldaNESRecomp C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-set(NESRECOMP_GAME_VERSION "1.10.0" CACHE STRING "Game release version")
+set(NESRECOMP_GAME_VERSION "1.10.1" CACHE STRING "Game release version")
 
 set(NESRECOMP_ROOT "${CMAKE_SOURCE_DIR}/nesrecomp" CACHE PATH
     "Path to the NESRecomp source tree")

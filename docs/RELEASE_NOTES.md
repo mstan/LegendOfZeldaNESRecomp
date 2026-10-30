@@ -1,3 +1,15 @@
+# v1.10.1 — Save-state loading fix
+
+Fix save states refusing to load in stock or Seamless Overworld after a
+first-person voxel session. Disabled voxel settings were retained in the save
+and incorrectly compared with a fresh session's camera defaults.
+
+Disabled voxel views now contribute no camera payload. Existing disabled
+records are validated and their unused camera settings are discarded. Active
+voxel states still require the same voxel mode and configured camera preset;
+invalid records are rejected before loading any machine state. Other mods and
+native in-game saves retain their existing behavior.
+
 # v1.10.0 — Seamless Overworld (experimental)
 
 This minor feature release adds **Seamless Overworld** as the first bundled
