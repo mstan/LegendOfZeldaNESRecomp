@@ -42,11 +42,16 @@ capacity reservations. Other owner work was left running.
   views through the game's TCP key interface. Logs confirm `State saved`,
   `State loaded` and `Resumed from rewind`.
 - The legacy voxel translation unit also passes a C11 syntax check.
+- Clean archive testing found missing MinGW DLLs in the release script. The
+  script now obtains these from the configured compiler when the build output
+  does not already contain them, and fails if a required DLL is missing.
 
 Reproduce the executable checks with `tests/savestate_probe.py --exe <exe>
 --rom <stock-USA-PRG0-ROM> --out <disposable-directory> --input <route.txt>
---frame 2400`. The route is `ROUTE` in `tools/cycle_probe.py`. Without an input
-route the probe defaults to a title-screen checkpoint.
+--frame 2400`. The route is `ROUTE` in `tools/cycle_probe.py`. Use a gameplay
+checkpoint: both v1.10.0 and the candidate can reframe the title canvas after
+a cold title-state load, so byte-identical title PNGs are not a valid regression
+gate for this change. Gameplay comparisons above remain exact.
 
 Raw logs, state/picture samples, host receipts, source/binary identities and
 release archive verification are retained under

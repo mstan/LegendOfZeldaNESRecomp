@@ -2,7 +2,7 @@
 
 Use a disposable output directory; battery saves and the launcher are disabled.
 Pass --input tools/cycle_probe.py's recorded route and --frame 2400 to exercise
-gameplay rather than the default title-screen checkpoint.
+gameplay. The route must reach gameplay before the checkpoint.
 """
 import argparse
 import hashlib
@@ -31,8 +31,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__)
     for name in ('exe', 'rom', 'out'):
         ap.add_argument('--' + name, type=Path, required=True)
-    ap.add_argument('--input', type=Path)
-    ap.add_argument('--frame', type=int, default=180)
+    ap.add_argument('--input', type=Path, required=True)
+    ap.add_argument('--frame', type=int, default=2400)
     a = ap.parse_args()
     a.out = a.out.resolve()
     a.out.mkdir(parents=True, exist_ok=True)
