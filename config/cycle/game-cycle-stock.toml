@@ -36,3 +36,8 @@ bytes = "A0 00 84 0F F0 16"
 id = "zelda.world.doorway"
 addr = 0x917C
 bytes = "A5 53 D0 22 A5 98"
+
+[[mod_function_hook]]
+id = "zelda.world.sprite-reset"
+addr = 0x6E1D
+bytes = "A2 60 A9 F8 9D 00 02 E8 E8 E8 E8 E0 00 D0 F5 AD"
