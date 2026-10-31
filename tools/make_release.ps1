@@ -65,8 +65,15 @@ foreach ($target in $variants) {
     New-Item -ItemType Directory -Path $stage | Out-Null
     try {
         foreach ($file in "$target.exe", 'SDL2.dll') { Copy-Item -LiteralPath (Join-Path $bin $file) -Destination $stage }
+        $compiler = Get-CacheValue 'CMAKE_C_COMPILER'
+        $mingw = [IO.Path]::GetFileName($compiler) -match '(^|-)gcc(?:-[0-9.]+)?\.exe$'
         foreach ($dll in 'libgcc_s_seh-1.dll', 'libstdc++-6.dll', 'libwinpthread-1.dll') {
-            if (Test-Path -LiteralPath (Join-Path $bin $dll)) { Copy-Item -LiteralPath (Join-Path $bin $dll) -Destination $stage }
+            $runtime = Join-Path $bin $dll
+            if (-not (Test-Path -LiteralPath $runtime) -and $mingw) {
+                $runtime = Join-Path (Split-Path -Parent $compiler) $dll
+            }
+            if (Test-Path -LiteralPath $runtime) { Copy-Item -LiteralPath $runtime -Destination $stage }
+            elseif ($mingw) { throw "Missing MinGW runtime dependency: $dll" }
         }
         Copy-Item -LiteralPath (Join-Path $bin 'assets') -Recurse -Destination (Join-Path $stage 'assets')
         Copy-Item -LiteralPath (Join-Path $root 'mods\preloaded') -Recurse -Destination (Join-Path $stage 'mods')
@@ -102,6 +109,10 @@ foreach ($target in $variants) {
         }
         $readme = @'
 The Legend of Zelda - USA/NTSC cycle preview
+
+v1.10.1 fixes save-state loading after switching from voxel views to stock or
+Seamless Overworld. Disabled voxel camera settings no longer block a load.
+Active voxel states still require the matching voxel mode and camera preset.
 
 v1.10.0 adds Seamless Overworld (Experimental), first in Mods under Camera.
 Enable it before PLAY for a continuous camera, neighboring terrain and live
