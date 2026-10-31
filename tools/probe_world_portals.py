@@ -17,6 +17,7 @@ def main():
     for n in ('exe', 'rom', 'state', 'out'):
         ap.add_argument('--'+n, type=Path, required=True)
     ap.add_argument('--port', type=int, default=27587)
+    ap.add_argument('--dungeon-state-out', type=Path)
     a = ap.parse_args()
     a.out.mkdir(parents=True, exist_ok=True)
     env = dict(os.environ, SDL_AUDIODRIVER='dummy', SDL_VIDEODRIVER='dummy',
@@ -176,6 +177,8 @@ def main():
             results['dungeon'] = shot('dungeon-interior')
             assert results['dungeon']['world']['scene_level'] == 1
             assert results['dungeon']['outside_native_scene_pixels'] > 500
+            if a.dungeon_state_out:
+                results['dungeon_state'] = cmd('save_state', path=str(a.dungeon_state_out.resolve()))
             results['dungeon_neighbor_decoder'] = cmd('zelda_world_probe', room=0x63)
             assert all(results['dungeon_neighbor_decoder'][k] for k in
                        ('cached_interior_exact', 'cached_attrs_exact', 'machine_state_unchanged'))

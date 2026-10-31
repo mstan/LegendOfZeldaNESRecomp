@@ -40,7 +40,7 @@ if(NESRECOMP_BACKEND STREQUAL "cycle")
             CAPTURE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/config/cycle/cyc_captures_${VARIANT}.txt"
             MODS HD_PACKS GAME_ID "legend-of-zelda-us" PLAYERS 1 REGION NTSC
             BOXART "${CMAKE_CURRENT_SOURCE_DIR}/assets/boxart.tga"
-            HOST_EXTRAS src/cyc_extras.c src/zelda_voxel.c src/zelda_world.c src/zelda_world_rooms.c src/zelda_voxel_plugin.c
+            HOST_EXTRAS src/cyc_extras.c src/zelda_voxel.c src/zelda_world.c src/zelda_world_canvas.c src/zelda_world_rooms.c src/zelda_voxel_plugin.c
                 "${NESRECOMP_ROOT}/runner/cyc/cyc_presentation.c"
                 "${NESRECOMP_ROOT}/runner/src/voxel_renderer.c"
                 "${NESRECOMP_ROOT}/runner/src/voxel_screen_profile.c"
@@ -59,6 +59,12 @@ if(NESRECOMP_BACKEND STREQUAL "cycle")
                 "${CMAKE_CURRENT_SOURCE_DIR}/mods/preloaded" "$<TARGET_FILE_DIR:${TARGET}>/mods")
     endfunction()
     add_zelda_cycle(LegendOfZeldaNESRecomp stock "${NESRECOMP_ROM}")
+    option(ZELDA_BUILD_RENDER_TESTS "Build targeted world-canvas differential test" OFF)
+    if(ZELDA_BUILD_RENDER_TESTS)
+        enable_testing()
+        add_executable(zelda_world_canvas_test tests/world_canvas_test.c)
+        add_test(NAME zelda_world_canvas_test COMMAND zelda_world_canvas_test)
+    endif()
     return()
 elseif(NOT NESRECOMP_BACKEND STREQUAL "legacy")
     message(FATAL_ERROR "NESRECOMP_BACKEND must be cycle or legacy")

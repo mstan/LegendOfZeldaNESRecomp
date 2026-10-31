@@ -145,7 +145,7 @@ static void tcp_setup(void *ctx) {
     zelda_world_tcp_setup();
 }
 static const CycHostOption options[]={
-    {"--world-view",true,"World view: off, follow, atlas or seamless"},
+    {"--world-view",true,"World view: off, follow, atlas, seamless or seamless-atlas"},
     {"--world-size",true,"Development world viewport WxH (128..4096 x 128..2048)"},
     {"--voxel",true,"stock, diorama or first-person"},
 #if defined(NESRECOMP_CYCLE_HDPACK) && !defined(NESRECOMP_CYCLE_HDPACK_MODS)

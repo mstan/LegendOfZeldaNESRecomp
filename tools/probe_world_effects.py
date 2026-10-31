@@ -96,6 +96,13 @@ def main():
                 if w['mask64']&1:
                     cmd('menu',open=True)
                     results['bomb_flash']=cmd('screenshot',layer='picture',path=str((a.out/'bomb-flash.png').resolve()))
+                    with Image.open(a.out/'bomb-flash.png') as im:
+                        field=im.convert('RGB').crop((0,64,im.width,im.height))
+                        chroma=max(max(rgb)-min(rgb) for rgb in field.getdata())
+                    # Grayscale PPUMASK must affect the expanded terrain too.
+                    # NTSC palette conversion can round neutral channels apart.
+                    assert chroma<=4,('expanded bomb flash retained colored terrain',chroma)
+                    results['bomb_flash_chroma']=chroma
                     break
             assert 'bomb_flash' in results, 'No native bomb flash observed'
             results['bomb_after']=cmd('read_ram',addr=0x658,len=1)

@@ -8,6 +8,7 @@
  */
 #include "zelda_world.h"
 #include "zelda_world_internal.h"
+#include "zelda_world_canvas.h"
 #include "cyc_presentation.h"
 #include "cyc_core.h"
 #include "cyc_mod.h"
@@ -32,6 +33,7 @@ static uint8_t raster_index[ROOMS][ROOM_W*ROOM_H];
 static uint32_t raster[ROOMS][ROOM_W*ROOM_H];
 static uint8_t raster_tiles[ROOMS][TILES],raster_attrs[ROOMS][48],raster_palette[ROOMS][16];
 static bool raster_valid[ROOMS];
+static uint64_t raster_revision;
 static uint8_t patterns[4096],tile_pixels[256][64];
 static bool patterns_valid;
 static uint32_t *canvas;
@@ -92,6 +94,7 @@ bool zelda_world_supported(void) {
 }
 bool zelda_world_live(void) {return mode==3;}
 void zelda_world_reset(void) {
+    zelda_canvas_release();
     memset(rooms,0,sizeof rooms);cached_level=cached_quest=-1;
     checked_rom=supported_rom=false;decoded=failed=0;
     patterns_valid=false;memset(raster_valid,0,sizeof raster_valid);
@@ -99,6 +102,7 @@ void zelda_world_reset(void) {
     zelda_world_rooms_reset();
 }
 void zelda_world_state_loaded(void) {
+    zelda_canvas_invalidate();
     unsigned slot=cyc_mod_peek(0x16);
     cached_level=cyc_mod_peek(0x10);
     cached_quest=cyc_mod_peek((uint16_t)(0x62d+(slot<3?slot:0)));
@@ -247,6 +251,7 @@ static void prepare_rasters(int w,int h) {
             memcpy(raster_palette[id],colors,16);
             uint32_t p[16];for(unsigned i=0;i<16;i++)p[i]=g_nes_palette[colors[i]&63];
             for(unsigned i=0;i<256*176;i++)raster[id][i]=p[raster_index[id][i]];
+            raster_revision++;
         }
         raster_valid[id]=true;
     }
@@ -267,6 +272,7 @@ static void draw_actors(unsigned id,int w,int h) {
             int lx=scene_link_x;sx=lx+((sx-lx+384)%256-128);
         }
         unsigned tile=o[1],attr=o[2],base=(tile&1)*0x1000+(tile&0xfe)*16;
+        zelda_canvas_dirty(ox+sx,oy+sy,8,16);
         for(int y=0;y<16;y++)for(int x=0;x<8;x++) {
             int dx=ox+sx+x,dy=oy+sy+y;
             if(dx<0||dx>=w||dy<64||dy>=h)continue;
@@ -440,10 +446,12 @@ const uint32_t *zelda_world_present(int *width,int *height) {
     const uint32_t *native=cyc_frame_argb();
     memset(ui_bounds,0,sizeof ui_bounds);
     if(game_mode==8||(death_view&&cyc_mod_peek(0x11)&&cyc_mod_peek(0x13)>=12)) {
+        zelda_canvas_invalidate();
         presentation=game_mode==8?"continue":"game-over";
         game_over_page(w,h,game_mode==8);goto complete;
     }
     if(game_mode<2||(game_mode>=13&&game_mode<=15)||game_mode==19) {
+        zelda_canvas_invalidate();
         presentation="system-ui";system_page(native,w,h);goto complete;
     }
     unsigned sub=cyc_mod_peek(0x13);bool updating=cyc_mod_peek(0x11)!=0;
@@ -464,12 +472,13 @@ const uint32_t *zelda_world_present(int *width,int *height) {
         memcpy(scene_native,native,sizeof scene_native);
         presentation=scene_local?"subroom-walk":"world-walk";
     } else presentation="portal-retained";
-    if(!scene_valid)return NULL;
+    if(!scene_valid){zelda_canvas_invalidate();return NULL;}
     unsigned room=scene_room;
     int room_x=(room&15)*ROOM_W,room_y=(room>>4)*ROOM_H;
     camera_x=(mode==2||atlas_view)?0:room_x+scene_link_x+8-w/2;
     camera_y=(mode==2||atlas_view)?0:room_y+scene_link_y-HUD_H+8-(h-HUD_H)/2;
     if(scene_local) {
+        zelda_canvas_invalidate();
         camera_x=128-w/2;camera_y=(176-(h-HUD_H))/2;
         draw_subroom(w,h);draw_hud(local_ready?native:scene_native,w,h);
         goto inventory;
@@ -480,17 +489,11 @@ const uint32_t *zelda_world_present(int *width,int *height) {
                    h-HUD_H>WORLD_H?(WORLD_H-(h-HUD_H))/2:WORLD_H-(h-HUD_H));
     prepare_rasters(w,h);
     unsigned background=scene_palette[0]&63;if(frame_mask&1)background&=0x30;
-    for(size_t i=0;i<count;i++)canvas[i]=g_nes_palette[background];
-    for(int y=HUD_H;y<h;y++) {
-        int wy=camera_y+y-HUD_H;if(wy<0||wy>=WORLD_H)continue;
-        for(int x=0;x<w;) {
-            int wx=camera_x+x;if(wx<0){x++;continue;}if(wx>=WORLD_W)break;
-            unsigned id=(unsigned)(wy/176)*16+(unsigned)(wx/256);
-            int run=256-wx%256;if(run>w-x)run=w-x;
-            if(rooms[id].owned&&rooms[id].valid)memcpy(canvas+(size_t)y*w+x,raster[id]+(wy%176)*256+wx%256,(size_t)run*sizeof *canvas);
-            x+=run;
-        }
-    }
+    uint8_t visible[ROOMS];
+    for(unsigned id=0;id<ROOMS;id++)visible[id]=(uint8_t)(rooms[id].owned&&rooms[id].valid);
+    ZeldaCanvasView view={w,h,camera_x,camera_y,g_nes_palette[background],
+                         &raster[0][0],visible,raster_revision};
+    zelda_canvas_begin(canvas,&view,mode==3);
     draw_hud(world_ready||game_mode==6||game_mode==0x10?native:scene_native,w,h);
     if(mode==3) {
         if(!death_view)for(unsigned id=0;id<128;id++)if(id!=room&&rooms[id].owned)draw_actors(id,w,h);
@@ -508,6 +511,7 @@ inventory:
          * never the stale native nametable underneath the inventory. */
         int panel=clamp((64-cyc_render_line_scroll_y(64)+480)%480,0,175);
         if(panel) {
+            zelda_canvas_invalidate();
             int hud_x=(w-ROOM_W)/2;
             if(panel>h-HUD_H)panel=h-HUD_H;
             memmove(canvas+(size_t)(HUD_H+panel)*w,canvas+(size_t)HUD_H*w,
@@ -526,10 +530,12 @@ complete:
 }
 bool zelda_world_option(const char *name,const char *value) {
     if(!strcmp(name,"--world-view")) {
+        atlas_view=false;
         if(!strcmp(value,"off"))mode=0;
         else if(!strcmp(value,"follow"))mode=1;
         else if(!strcmp(value,"atlas"))mode=2;
         else if(!strcmp(value,"seamless"))mode=3;
+        else if(!strcmp(value,"seamless-atlas")){mode=3;atlas_view=true;}
         else return false;
         zelda_world_enable_hooks(mode==3);
         if(mode==3)nes_mod_set_local_only("Seamless Overworld",1);
@@ -606,14 +612,32 @@ static void world_probe(int id,const char *line) {
         requested,decoded_ok?"true":"false",tiles_exact?"true":"false",attrs_exact?"true":"false",cached_tiles?"true":"false",cached_interior?"true":"false",mismatches,cached_attrs?"true":"false",unchanged?"true":"false");
     cyc_tcp_ok(id,out);
 }
+static void world_view(int id,const char *line) {
+    if(!mode){cyc_tcp_err(id,"world view needs an enabled world mod");return;}
+    bool requested=atlas_view;
+    if(cyc_tcp_bool(line,"atlas",&requested)&&requested!=atlas_view) {
+        atlas_view=requested;cyc_render_frame_done();
+    }
+    char out[80];snprintf(out,sizeof out,"\"atlas\":%s",atlas_view?"true":"false");
+    cyc_tcp_ok(id,out);
+}
+static void canvas_state(int id,const char *line) {
+    (void)line;uint64_t builds=0,reuses=0,bytes=0;
+    zelda_canvas_stats(&builds,&reuses,&bytes);
+    char out[240];snprintf(out,sizeof out,"\"builds\":%llu,\"reuses\":%llu,\"bytes\":%llu",
+        (unsigned long long)builds,(unsigned long long)reuses,(unsigned long long)bytes);
+    cyc_tcp_ok(id,out);
+}
 void zelda_world_tcp_setup(void) {
     cyc_tcp_register("zelda_world_timing","World simulation/render p50, p95 and maximum microseconds",world_timing);
     cyc_tcp_register("zelda_world","Development world camera and coverage",world_state);
     cyc_tcp_register("zelda_world_probe","Check guest decoder against live room and full machine isolation",world_probe);
+    cyc_tcp_register("zelda_world_view","QA viewport: atlas true/false (same as F4)",world_view);
+    cyc_tcp_register("zelda_world_canvas","Retained terrain viewport counters and capacity",canvas_state);
     zelda_world_rooms_tcp_setup();
 }
 
-static void reset_world_plugin(void) {mode=0;fixed_w=fixed_h=0;atlas_view=false;zelda_world_enable_hooks(false);}
+static void reset_world_plugin(void) {zelda_canvas_release();mode=0;fixed_w=fixed_h=0;atlas_view=false;zelda_world_enable_hooks(false);}
 static void activate_world_plugin(void) {
     mode=3;zoom=nes_mod_get_option_int("legend-of-zelda.enhancement.seamless-world","seamless-world","pixel-zoom",3);
     zelda_world_enable_hooks(true);nes_mod_set_local_only("Seamless Overworld",1);
