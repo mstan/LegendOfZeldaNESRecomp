@@ -21,11 +21,20 @@
 
 static uint8_t local[2048];
 static bool mask_ready, simulating;
+#ifdef NESRECOMP_TEST_NATIVE_JOBS
+static bool sprite_job_enabled=true;
+static uint64_t sprite_job_count;
+void zelda_world_test_sprite_mode(bool sim,bool enabled) {simulating=sim;sprite_job_enabled=enabled;}
+uint64_t zelda_world_test_sprite_jobs(void) {return sprite_job_count;}
+#else
+#define sprite_job_enabled true
+#endif
 static int level=-1, quest=-1, previous_room=-1, previous_x,previous_y;
 static uint64_t last_cycle=UINT64_MAX, handoffs, failures;
 static const char *hook_ids[]={"zelda.world.edge","zelda.world.player",
-    "zelda.world.moving-tile","zelda.world.still-tile","zelda.world.doorway"};
-static const uint16_t hook_pcs[]={0xf161,0xeda0,0xedfa,0xedf4,0x917c};
+    "zelda.world.moving-tile","zelda.world.still-tile","zelda.world.doorway",
+    "zelda.world.sprite-reset"};
+static const uint16_t hook_pcs[]={0xf161,0xeda0,0xedfa,0xedf4,0x917c,0x6e1d};
 static uint8_t peek(unsigned a) {return cyc_mod_peek((uint16_t)a);}
 static void poke(unsigned a,unsigned v) {(void)cyc_mod_poke((uint16_t)a,(uint8_t)v);}
 static bool call(uint16_t pc,uint8_t a) {
@@ -268,9 +277,36 @@ static uint8_t tile_at(int wx,int wy) {
     unsigned x=(unsigned)(wx%256)/8,y=(unsigned)(wy%176)/8;
     return r->tiles[x*22+y];
 }
+/* The complete copied sprite-reset/cursor service, qualified against both its
+ * body and helper. Only neighboring rooms use it: the active machine keeps
+ * the original routine. Resume before the final STA/RTS so their normal bus,
+ * stack, return-target and failure behavior remain owned by the CPU. */
+static void sprite_reset(CycModRegs *regs) {
+    static const uint8_t body[]={0xa2,0x60,0xa9,0xf8,0x9d,0,2,0xe8,0xe8,
+        0xe8,0xe8,0xe0,0,0xd0,0xf5,0xad,0x42,3,0x20,0x39,0x6e,0x8d,0x42,3,0x60};
+    static const uint8_t helper[]={0x18,0x69,1,0xc9,0x28,0xd0,2,0xa9,0,0x8d,0x41,3,0x60};
+    const CycModCodeRegion code[]={{0x6e1d,body,sizeof body},{0x6e39,helper,sizeof helper}};
+    unsigned old=peek(0x342);
+    uint64_t cycles=old==39?753:752;
+    if(!simulating || !sprite_job_enabled || !zelda_world_supported() ||
+       !cyc_mod_isolated_job_ready(code,2,cycles))return;
+    for(unsigned a=0x260;a<0x300;a+=4)poke(a,0xf8);
+    /* The original inner JSR leaves its return address on the scratch stack. */
+    poke(0x100|regs->s,0x6e);poke(0x100|(uint8_t)(regs->s-1),0x31);
+    unsigned next=(old+1)&255,compare=(next-0x28)&255;
+    regs->a=(uint8_t)(next==0x28?0:next);regs->x=0;
+    regs->p=(uint8_t)((regs->p&~0xc3u)|(old==0x7f?0x40:0)|
+        (next>=0x28?1:0)|(compare&0x80)|(compare?0:2));
+    poke(0x341,regs->a);cyc_mod_set_regs(regs);
+    cyc_mod_isolated_job_resume(cycles,0x6e31,0x6e32);
+#ifdef NESRECOMP_TEST_NATIVE_JOBS
+    sprite_job_count++;
+#endif
+}
 static int hook(uint16_t pc) {
     if(!zelda_world_live())return 0;
     CycModRegs regs;cyc_mod_regs(&regs);
+    if(pc==0x6e1d){sprite_reset(&regs);return 0;}
     if(pc==0xeda0) {
         if(!simulating)return 0;
         regs.x=0;cyc_mod_set_regs(&regs);return 1;
