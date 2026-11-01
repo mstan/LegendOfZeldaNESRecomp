@@ -120,6 +120,10 @@ replacement music and sound files remain unsupported. To return to stock,
 disable the feature in the launcher and restart. Pack/patch selection is
 read-only during gameplay, and save states require matching assets and options.
 
+With Remastered enabled, choose **Graphics → HD resolution** in the in-game
+settings. **Pack resolution** keeps the pack's original size; you can also choose
+1× through 16×. The 32× and 64× choices are experimental.
+
 ## Voxel 3D (experimental)
 
 <p align="center">
