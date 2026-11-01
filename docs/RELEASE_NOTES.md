@@ -1,3 +1,16 @@
+# v1.11.0 — HD rendering resolution
+
+Zelda Remastered HD can now use resident GPU rendering with a selectable
+resolution under **Graphics → HD resolution**. Choose the pack's authored
+resolution or 1×, 2×, 4×, 8× and 16×. The 32× and 64× choices are experimental.
+Rendering samples the original pack art; it does not generate additional detail.
+
+The qualified RTX 3080 Ti gameplay interval ran at 93.24–108.30 FPS at true
+16× (4096×3840), with no GPU fallback. This qualification applies to Remastered
+HD; stock and voxel presentation retain their existing renderers. When the GPU
+backend is unavailable, portable CPU rendering uses the pack's authored
+resolution. Native gameplay and in-game saves retain their existing behavior.
+
 # v1.10.1 — Save-state loading fix
 
 Fix save states refusing to load in stock or Seamless Overworld after a

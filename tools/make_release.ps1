@@ -85,6 +85,20 @@ foreach ($target in $variants) {
         Copy-Item -LiteralPath (Join-Path $framework 'tools\package_hdpack.py') -Destination (Join-Path $stage 'tools')
         Copy-Item -LiteralPath (Join-Path $root 'hdpatch\ZeldaRemasteredReadme.txt') -Destination (Join-Path $stage 'hdpatch')
         foreach ($doc in 'README.md', 'LICENSE') { Copy-Item -LiteralPath (Join-Path $root $doc) -Destination $stage }
+        $ui = Get-CacheValue 'NESRECOMP_RECOMP_UI'
+        if (-not $ui) { $ui = Get-CacheValue 'RECOMP_UI_ROOT' }
+        if (-not $ui) { $ui = Join-Path $root 'recomp-ui' }
+        $licenses = @{
+            'Game-LICENSE.txt' = (Join-Path $root 'LICENSE')
+            'NESRecomp-LICENSE.txt' = (Join-Path $framework 'LICENSE')
+            'SDL2-COPYING.txt' = (Join-Path $framework 'runner/external/SDL2/COPYING.txt')
+            'ImGui-LICENSE.txt' = (Join-Path $ui 'src/third_party/imgui/LICENSE.txt')
+        }
+        New-Item -ItemType Directory -Path (Join-Path $stage 'licenses') | Out-Null
+        foreach ($name in $licenses.Keys) {
+            if (-not (Test-Path -LiteralPath $licenses[$name])) { throw "Missing license: $($licenses[$name])" }
+            Copy-Item -LiteralPath $licenses[$name] -Destination (Join-Path $stage "licenses/$name")
+        }
         New-Item -ItemType Directory -Path (Join-Path $stage 'docs\assets') | Out-Null
         foreach ($doc in 'CYCLE-MIGRATION.md', 'RELEASE_NOTES.md', 'DIAGNOSTICS.md', 'SEAMLESS-WORLD.md') {
             Copy-Item -LiteralPath (Join-Path $root "docs\$doc") -Destination (Join-Path $stage 'docs')
@@ -109,6 +123,13 @@ foreach ($target in $variants) {
         }
         $readme = @'
 The Legend of Zelda - USA/NTSC cycle preview
+
+v1.11.0 adds resident GPU rendering for Zelda Remastered HD. Graphics > HD
+resolution selects Pack resolution or 1x, 2x, 4x, 8x and 16x; 32x and 64x are
+experimental. The qualified RTX 3080 Ti gameplay interval reached 93.24-108.30
+FPS at true 16x (4096x3840), with no GPU fallback. Portable CPU rendering uses
+the pack's authored resolution when the GPU backend is unavailable. Stock
+and voxel views retain their existing renderers. See docs/RELEASE_NOTES.md.
 
 v1.10.1 fixes save-state loading after switching from voxel views to stock or
 Seamless Overworld. Disabled voxel camera settings no longer block a load.
