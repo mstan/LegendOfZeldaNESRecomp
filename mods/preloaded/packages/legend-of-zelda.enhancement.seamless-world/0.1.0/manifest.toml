@@ -18,7 +18,7 @@ name = "Seamless Overworld"
 experimental = true
 description = "A continuous camera with neighboring terrain and live actors, including connected dungeon rooms. Fits the window as it resizes. Mouse wheel changes zoom; F4 shows the whole map. Caves, stairs and maze puzzles keep their portal routing. Cross-room enemy/projectile interactions are incomplete; full-map simulation is slower. Local play only."
 group = "Camera"
-default_enabled = false
+default_enabled = true
 exclusive_group = "display-mode"
 
 [[plugin]]
@@ -36,3 +36,24 @@ default = 3
 min = 1
 max = 8
 step = 1
+
+[[option]]
+feature = "seamless-world"
+id = "stopwatch-scope"
+label = "Stopwatch scope"
+description = "Choose where the stopwatch freezes enemies. Current viewport and Current room keep the area captured at pickup, even after Link moves or the window is resized."
+group = "Gameplay"
+type = "choice"
+default = "entire-map"
+
+[[option.choice]]
+value = "entire-map"
+label = "Entire map"
+
+[[option.choice]]
+value = "current-viewport"
+label = "Current viewport"
+
+[[option.choice]]
+value = "current-room"
+label = "Current room"

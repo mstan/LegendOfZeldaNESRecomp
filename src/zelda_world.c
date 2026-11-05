@@ -70,9 +70,32 @@ enum { SCENE_ROOM_RECORD=3+704+48+32,
 static uint8_t pending_scene[SCENE_STATE_SIZE];
 static bool pending_scene_valid;
 static void restore_scene(void);
+static int clamp(int x,int lo,int hi) {return x<lo?lo:x>hi?hi:x;}
 static void drawable_size(void) {
     int w,h;cyc_video_drawable_size(&w,&h);
     if(w>0&&h>0){draw_w=w;draw_h=h;}
+}
+static void view_bounds(unsigned room,int x,int y,int w,int h,int *left,int *top) {
+    int wx=(int)(room&15)*ROOM_W+x+8-w/2;
+    int wy=(int)(room>>4)*ROOM_H+y-HUD_H+8-(h-HUD_H)/2;
+    if(mode==2||atlas_view)wx=wy=0;
+    *left=w>WORLD_W?(WORLD_W-w)/2:wx<0?0:wx>WORLD_W-w?WORLD_W-w:wx;
+    *top=h-HUD_H>WORLD_H?(WORLD_H-(h-HUD_H))/2:
+        wy<0?0:wy>WORLD_H-(h-HUD_H)?WORLD_H-(h-HUD_H):wy;
+}
+void zelda_world_view_bounds(int *left,int *top,int *right,int *bottom) {
+    /* Capture what was actually presented. Native weapon pickups temporarily
+     * substitute the weapon's coordinates for Link's during TakeItem. */
+    if(scene_valid&&!scene_local&&picture_w&&picture_h) {
+        *left=camera_x;*top=camera_y;
+        *right=camera_x+picture_w;*bottom=camera_y+picture_h-HUD_H;return;
+    }
+    drawable_size();
+    int w=fixed_w?fixed_w:clamp(draw_w/zoom,128,4096);
+    int h=fixed_h?fixed_h:clamp(draw_h/zoom,128,2048);
+    if(mode==2||atlas_view){w=WORLD_W;h=WORLD_H+HUD_H;}
+    view_bounds(cyc_mod_peek(0xeb),cyc_mod_peek(0x70),cyc_mod_peek(0x84),w,h,left,top);
+    *right=*left+w;*bottom=*top+h-HUD_H;
 }
 
 static uint32_t crc32(const uint8_t *p,size_t n) {
@@ -205,7 +228,6 @@ void zelda_world_refresh(void) {
     for(int i=0;i<48;i++)rooms[room].attrs[i]=cyc_mod_peek((uint16_t)(0x530+i));
     rooms[room].valid=true;
 }
-static int clamp(int x,int lo,int hi) {return x<lo?lo:x>hi?hi:x;}
 static unsigned terrain_index(int wx,int wy) {
     if(wx<0 || wx>=WORLD_W || wy<0 || wy>=WORLD_H)return 0;
     const WorldRoom *r=&rooms[(wy/ROOM_H)*16+wx/ROOM_W];
@@ -475,18 +497,13 @@ const uint32_t *zelda_world_present(int *width,int *height) {
     if(!scene_valid){zelda_canvas_invalidate();return NULL;}
     unsigned room=scene_room;
     int room_x=(room&15)*ROOM_W,room_y=(room>>4)*ROOM_H;
-    camera_x=(mode==2||atlas_view)?0:room_x+scene_link_x+8-w/2;
-    camera_y=(mode==2||atlas_view)?0:room_y+scene_link_y-HUD_H+8-(h-HUD_H)/2;
+    view_bounds(room,scene_link_x,scene_link_y,w,h,&camera_x,&camera_y);
     if(scene_local) {
         zelda_canvas_invalidate();
         camera_x=128-w/2;camera_y=(176-(h-HUD_H))/2;
         draw_subroom(w,h);draw_hud(local_ready?native:scene_native,w,h);
         goto inventory;
     }
-    /* Clamp at world edges, never at individual screen edges. */
-    camera_x=clamp(camera_x,w>WORLD_W?(WORLD_W-w)/2:0,w>WORLD_W?(WORLD_W-w)/2:WORLD_W-w);
-    camera_y=clamp(camera_y,h-HUD_H>WORLD_H?(WORLD_H-(h-HUD_H))/2:0,
-                   h-HUD_H>WORLD_H?(WORLD_H-(h-HUD_H))/2:WORLD_H-(h-HUD_H));
     prepare_rasters(w,h);
     unsigned background=scene_palette[0]&63;if(frame_mask&1)background&=0x30;
     uint8_t visible[ROOMS];
@@ -637,9 +654,13 @@ void zelda_world_tcp_setup(void) {
     zelda_world_rooms_tcp_setup();
 }
 
-static void reset_world_plugin(void) {zelda_canvas_release();mode=0;fixed_w=fixed_h=0;atlas_view=false;zelda_world_enable_hooks(false);}
+static void reset_world_plugin(void) {zelda_canvas_release();mode=0;fixed_w=fixed_h=0;atlas_view=false;zelda_world_enable_hooks(false);zelda_world_stopwatch_configure("entire-map");}
 static void activate_world_plugin(void) {
     mode=3;zoom=nes_mod_get_option_int("legend-of-zelda.enhancement.seamless-world","seamless-world","pixel-zoom",3);
+    char scope[32];
+    if(!nes_mod_option_value("legend-of-zelda.enhancement.seamless-world","seamless-world","stopwatch-scope",scope,sizeof scope))
+        strcpy(scope,"entire-map");
+    zelda_world_stopwatch_configure(scope);
     zelda_world_enable_hooks(true);nes_mod_set_local_only("Seamless Overworld",1);
 }
 NES_MOD_CONSTRUCTOR(register_world_plugin) {

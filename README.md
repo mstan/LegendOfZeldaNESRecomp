@@ -37,7 +37,9 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
 
 New in **v1.10.0**. Open **Mods** and enable **Seamless Overworld**, the first
 entry under **Camera**. Its amber **EXP / EXPERIMENTAL** badge marks it as an
-experimental feature. It is bundled and disabled by default.
+experimental feature. Fresh profiles enable it for adaptive widescreen;
+existing explicit mod choices are retained. Its Gameplay options include
+Stopwatch scope: Entire map, Current viewport at pickup, or Current room at pickup.
 
 <p align="center">
   <img src="docs/assets/seamless-overworld.png" alt="Expanded Zelda overworld showing Link and live enemies in neighboring areas" width="960">

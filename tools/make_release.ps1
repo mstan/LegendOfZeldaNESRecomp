@@ -124,6 +124,13 @@ foreach ($target in $variants) {
         $readme = @'
 The Legend of Zelda - USA/NTSC cycle preview
 
+v1.12.0 adds Stopwatch scope under Seamless Overworld's Gameplay options:
+Entire map (the existing default), Current viewport, or Current room.
+Viewport and room are captured at pickup and stay fixed when moving,
+zooming or resizing. Another clock captures a new area; save states retain it.
+Fresh profiles enable Seamless Overworld for adaptive widescreen by default.
+Existing explicit display/mod choices, native saves and settings are preserved.
+
 v1.11.0 adds resident GPU rendering for Zelda Remastered HD. Graphics > HD
 resolution selects Pack resolution or 1x, 2x, 4x, 8x and 16x; 32x and 64x are
 experimental. The qualified RTX 3080 Ti gameplay interval reached 93.24-108.30
@@ -138,7 +145,7 @@ Active voxel states still require the matching voxel mode and camera preset.
 v1.10.0 adds Seamless Overworld (Experimental), first in Mods under Camera.
 Enable it before PLAY for a continuous camera, neighboring terrain and live
 actors, adaptive Fit to screen and connected dungeon rooms. Mouse wheel changes
-pixel zoom; F4 shows the whole map. It is bundled and disabled by default.
+pixel zoom; F4 shows the whole map. It is bundled; fresh profiles enable it.
 Caves, stairs and maze puzzles preserve their original portal routing.
 Local play only; cross-room enemy/projectile interactions remain incomplete,
 whole-map simulation is slower, and broader full-game coverage remains open.
