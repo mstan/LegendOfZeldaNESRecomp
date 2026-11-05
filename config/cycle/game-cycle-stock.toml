@@ -13,6 +13,11 @@ bank = 1
 size = 0x1370
 
 [[mod_function_hook]]
+id = "zelda.world.stopwatch"
+addr = 0x73B5
+bytes = "99 57 06 60 A0 04"
+
+[[mod_function_hook]]
 id = "zelda.world.edge"
 addr = 0xF161
 bytes = "A6 84 AD F8 03 F0"

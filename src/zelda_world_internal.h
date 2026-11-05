@@ -22,5 +22,7 @@ void zelda_world_sync_doors(unsigned room,unsigned entering);
 int zelda_world_neighbor(unsigned room,unsigned direction);
 bool zelda_world_portal(unsigned room);
 void zelda_world_enable_hooks(bool enabled);
+void zelda_world_stopwatch_configure(const char *scope);
+void zelda_world_view_bounds(int *left,int *top,int *right,int *bottom);
 uint64_t zelda_world_handoffs(void);
 uint64_t zelda_world_sim_failures(void);

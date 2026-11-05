@@ -17,6 +17,25 @@ actual world is visible at the selected pixel zoom. Wide and portrait windows
 both expand the terrain/actors, with the native HUD centered. Mouse wheel changes
 zoom; F4 toggles the entire current area's map. No extracted graphics are shipped.
 
+**Stopwatch scope** in the mod's Gameplay options chooses **Entire map**
+(the existing default), **Current viewport**, or **Current room**. Viewport
+captures the actual visible world rectangle at pickup, including adaptive Fit
+and ultrawide margins; only actors intersecting that rectangle are frozen.
+Room captures the original NES room occupied at pickup. Moving Link, zooming,
+or resizing afterward does not move either captured area. A second stopwatch
+captures a new area. Current-build save states retain the pickup area. The
+original clock's room/area-transition reset and native enemy rules still apply.
+
+Stopwatch validation (2026-11-04, `beads-2dw.18.7`): Windows x64 HLE,
+real native dropped-clock pickups, adaptive 2520x1080 window (840x360 world
+canvas), and partially visible neighboring rooms. Map froze all 12 sampled
+neighbor enemies; viewport froze 11 while the enemy outside its rectangle
+moved; room left 11 neighbor enemies moving. A second pickup in room 0x78
+froze its four native octoroks for all three choices. Moving to another room,
+portrait resizing, current-build save/load and atomic rejection of an invalid
+saved rectangle passed. Reproduce with `tests/stopwatch_probe.py`; raw TCP,
+states and results: `G:/Temp/Codex/zelda-stopwatch-20261104/runtime`.
+
 Ordinary overworld crossings and ordinary open/key dungeon doors keep Link moving
 in mode 5. They do not run the old mode 6/7 stop-and-scroll sequence. The camera
 follows world coordinates; a native room handoff adopts the destination's already

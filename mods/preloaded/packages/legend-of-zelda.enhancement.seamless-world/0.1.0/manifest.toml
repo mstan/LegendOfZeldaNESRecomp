@@ -36,3 +36,24 @@ default = 3
 min = 1
 max = 8
 step = 1
+
+[[option]]
+feature = "seamless-world"
+id = "stopwatch-scope"
+label = "Stopwatch scope"
+description = "Choose where the stopwatch freezes enemies. Current viewport and Current room keep the area captured at pickup, even after Link moves or the window is resized."
+group = "Gameplay"
+type = "choice"
+default = "entire-map"
+
+[[option.choice]]
+value = "entire-map"
+label = "Entire map"
+
+[[option.choice]]
+value = "current-viewport"
+label = "Current viewport"
+
+[[option.choice]]
+value = "current-room"
+label = "Current room"

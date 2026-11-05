@@ -31,12 +31,47 @@ uint64_t zelda_world_test_sprite_jobs(void) {return sprite_job_count;}
 #endif
 static int level=-1, quest=-1, previous_room=-1, previous_x,previous_y;
 static uint64_t last_cycle=UINT64_MAX, handoffs, failures;
+enum { CLOCK_MAP, CLOCK_VIEWPORT, CLOCK_ROOM };
+static int clock_scope;
+static bool clock_captured;
+static unsigned clock_room;
+static int clock_bounds[4];
 static const char *hook_ids[]={"zelda.world.edge","zelda.world.player",
     "zelda.world.moving-tile","zelda.world.still-tile","zelda.world.doorway",
-    "zelda.world.sprite-reset"};
-static const uint16_t hook_pcs[]={0xf161,0xeda0,0xedfa,0xedf4,0x917c,0x6e1d};
+    "zelda.world.sprite-reset","zelda.world.stopwatch"};
+static const uint16_t hook_pcs[]={0xf161,0xeda0,0xedfa,0xedf4,0x917c,0x6e1d,0x73b5};
 static uint8_t peek(unsigned a) {return cyc_mod_peek((uint16_t)a);}
 static void poke(unsigned a,unsigned v) {(void)cyc_mod_poke((uint16_t)a,(uint8_t)v);}
+static void capture_clock(void) {
+    clock_room=peek(0xeb);
+    zelda_world_view_bounds(&clock_bounds[0],&clock_bounds[1],&clock_bounds[2],&clock_bounds[3]);
+    clock_captured=true;
+}
+static bool clock_applies(unsigned room,unsigned x,unsigned y) {
+    if(clock_scope==CLOCK_MAP||!clock_captured)return true;
+    if(clock_scope==CLOCK_ROOM)return room==clock_room;
+    /* Native actor cards are 16x16. Include actors partly visible at an edge;
+     * the HUD is outside the world rectangle and never expands the scope. */
+    int wx=(int)(room&15)*256+(int)x,wy=(int)(room>>4)*176+(int)y-64;
+    return wx+16>clock_bounds[0]&&wx<clock_bounds[2]&&
+           wy+16>clock_bounds[1]&&wy<clock_bounds[3];
+}
+static uint8_t clock_read(uint16_t pc,uint16_t addr,uint8_t value) {
+    if(addr!=0x66c||!value||!zelda_world_live())return value;
+    CycModRegs regs;cyc_mod_regs(&regs);
+    /* BeginUpdateWorld applies the clock to Link's invincibility. All other
+     * native clock reads concern the object in X (including collisions and
+     * projectiles). Keep physical InvClock intact across seamless handoffs. */
+    unsigned slot=pc==0xec7a?0:regs.x;
+    if(slot>=20)return value;
+    return clock_applies(peek(0xeb),peek(0x70+slot),peek(0x84+slot))?value:0;
+}
+void zelda_world_stopwatch_configure(const char *scope) {
+    clock_scope=!strcmp(scope,"current-viewport")?CLOCK_VIEWPORT:
+                !strcmp(scope,"current-room")?CLOCK_ROOM:CLOCK_MAP;
+    clock_captured=false;
+    cyc_mod_set_ram_read_hook(zelda_world_live()&&clock_scope!=CLOCK_MAP?clock_read:NULL);
+}
 static bool call(uint16_t pc,uint8_t a) {
     CycModRegs r={0};r.a=a;r.s=0xfd;r.p=0x24;return cyc_mod_call(pc,&r);
 }
@@ -73,10 +108,12 @@ int zelda_world_neighbor(unsigned room,unsigned dir) {
 void zelda_world_enable_hooks(bool enabled) {
     for(unsigned i=0;i<sizeof hook_ids/sizeof *hook_ids;i++)
         nes_mod_set_function_hook_enabled(hook_ids[i],enabled?1:0);
+    cyc_mod_set_ram_read_hook(enabled&&clock_scope!=CLOCK_MAP?clock_read:NULL);
 }
 void zelda_world_rooms_reset(void) {
     make_mask();level=quest=previous_room=-1;last_cycle=UINT64_MAX;
     handoffs=failures=0;simulating=false;
+    clock_captured=false;
 }
 void zelda_world_rooms_loaded(void) {simulating=false;}
 uint64_t zelda_world_handoffs(void) {return handoffs;}
@@ -230,6 +267,7 @@ void zelda_world_rooms_step(void) {
     uint64_t cycle=cyc_cycle_count();
     if(cycle==last_cycle)return;
     last_cycle=cycle;
+    if(!peek(0x66c))clock_captured=false;
     unsigned slot=peek(0x16);int q=peek(0x62d+(slot<3?slot:0)),lev=peek(0x10);
     if(lev!=level||q!=quest){level=lev;quest=q;previous_room=-1;}
     if(peek(0x12)!=5 || peek(0xe0)||peek(0xe1)){previous_room=-1;return;}
@@ -307,6 +345,13 @@ static int hook(uint16_t pc) {
     if(!zelda_world_live())return 0;
     CycModRegs regs;cyc_mod_regs(&regs);
     if(pc==0x6e1d){sprite_reset(&regs);return 0;}
+    if(pc==0x73b5) {
+        /* SetItemValue: Y is the inventory slot, A is the value being stored.
+         * Observe the real pickup, including another clock while one is held.
+         * Speculative neighbor execution must never move the pickup area. */
+        if(!simulating&&regs.y==0x15&&regs.a)capture_clock();
+        return 0;
+    }
     if(pc==0xeda0) {
         if(!simulating)return 0;
         regs.x=0;cyc_mod_set_regs(&regs);return 1;
@@ -355,6 +400,37 @@ static int hook(uint16_t pc) {
 enum { RECORD=1+2048+704+48+32+8, HEADER=40 };
 static void put64(uint8_t *p,uint64_t n){for(int i=0;i<8;i++){p[i]=(uint8_t)n;n>>=8;}}
 static uint64_t get64(const uint8_t *p){uint64_t n=0;for(int i=7;i>=0;i--)n=(n<<8)|p[i];return n;}
+static int clock_save(uint8_t *out,int cap) {
+    if(!zelda_world_live()||!clock_captured)return 0;
+    if(cap<24)return -1;
+    memset(out,0,24);memcpy(out,"ZWC1",4);out[4]=(uint8_t)clock_room;
+    for(unsigned i=0;i<4;i++) {
+        unsigned v=(unsigned)(clock_bounds[i]+4096);
+        out[8+i*4]=(uint8_t)v;out[9+i*4]=(uint8_t)(v>>8);
+    }
+    return 24;
+}
+static int clock_validate(const uint8_t *in,int len) {
+    if(!len)return 1;
+    if(!in||len!=24||memcmp(in,"ZWC1",4)||in[4]>=128)return 0;
+    int bounds[4];
+    for(unsigned i=0;i<4;i++) {
+        if(in[10+i*4]||in[11+i*4])return 0;
+        bounds[i]=(int)(in[8+i*4]|(in[9+i*4]<<8))-4096;
+        if(bounds[i]<-4096||bounds[i]>8192)return 0;
+    }
+    return bounds[2]>bounds[0]&&bounds[2]-bounds[0]<=4096&&
+           bounds[3]>bounds[1]&&bounds[3]-bounds[1]<=1984;
+}
+static int clock_load(const uint8_t *in,int len) {
+    if(!clock_validate(in,len))return 0;
+    clock_captured=len!=0;
+    if(len) {
+        clock_room=in[4];
+        for(unsigned i=0;i<4;i++)clock_bounds[i]=(int)(in[8+i*4]|(in[9+i*4]<<8))-4096;
+    }
+    return 1;
+}
 static int save(uint8_t *out,int cap) {
     if(!zelda_world_live())return 0;
     int need=HEADER+128*RECORD;if(cap<need)return -1;
@@ -415,8 +491,11 @@ static void room_state(int id,const char *line) {
     long room=peek(0xeb);cyc_tcp_long(line,"room",&room);
     if(room<0||room>127){cyc_tcp_err(id,"room0..127");return;}
     const ZeldaWorldRoom *r=&zelda_world_rooms[room];char out[3500];
-    int n=snprintf(out,sizeof out,"\"room\":%ld,\"owned\":%s,\"ready\":%s,\"ticks\":%llu,\"world_position\":[%u,%u],\"slots\":[",room,r->owned?"true":"false",r->simulation_ready?"true":"false",(unsigned long long)r->ticks,
+    int n=snprintf(out,sizeof out,"\"room\":%ld,\"owned\":%s,\"ready\":%s,\"ticks\":%llu,\"world_position\":[%u,%u],",room,r->owned?"true":"false",r->simulation_ready?"true":"false",(unsigned long long)r->ticks,
         (peek(0xeb)&15)*256+peek(0x70),(peek(0xeb)>>4)*176+peek(0x84)-64);
+    n+=snprintf(out+n,sizeof out-(size_t)n,"\"stopwatch_scope\":\"%s\",\"stopwatch_captured\":%s,\"stopwatch_room\":%u,\"stopwatch_bounds\":[%d,%d,%d,%d],\"slots\":[",
+        clock_scope==CLOCK_VIEWPORT?"current-viewport":clock_scope==CLOCK_ROOM?"current-room":"entire-map",
+        clock_captured?"true":"false",clock_room,clock_bounds[0],clock_bounds[1],clock_bounds[2],clock_bounds[3]);
     for(unsigned s=1;s<=11;s++)n+=snprintf(out+n,sizeof out-(size_t)n,"%s{\"slot\":%u,\"type\":%u,\"x\":%u,\"y\":%u,\"state\":%u,\"meta\":%u,\"timer\":%u,\"hp\":%u}",s==1?"":",",s,r->ram[0x34f+s],r->ram[0x70+s],r->ram[0x84+s],r->ram[0xac+s],r->ram[0x405+s],r->ram[0x28+s],r->ram[0x485+s]);
     snprintf(out+n,sizeof out-(size_t)n,"]");cyc_tcp_ok(id,out);
 }
@@ -466,5 +545,7 @@ NES_MOD_CONSTRUCTOR(register_zelda_world_rooms) {
     for(unsigned i=0;i<sizeof hook_ids/sizeof *hook_ids;i++)
         if(!nes_mod_register_function_entry_plugin(hook_ids[i],hook_pcs[i],hook))abort();
     if(!nes_mod_register_savestate_hook("zelda.world.rooms",save,load)||
-       !nes_mod_register_savestate_validator("zelda.world.rooms",validate))abort();
+       !nes_mod_register_savestate_validator("zelda.world.rooms",validate)||
+       !nes_mod_register_savestate_hook("zelda.world.stopwatch",clock_save,clock_load)||
+       !nes_mod_register_savestate_validator("zelda.world.stopwatch",clock_validate))abort();
 }
