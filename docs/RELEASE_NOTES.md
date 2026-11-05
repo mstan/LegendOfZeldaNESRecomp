@@ -1,3 +1,18 @@
+# v1.12.0 — Stopwatch freeze scopes
+
+Seamless Overworld now has a **Stopwatch scope** dropdown under its Gameplay
+options: **Entire map** (the existing default), **Current viewport**, and
+**Current room**. Viewport captures the visible world rectangle at pickup,
+including adaptive Fit and ultrawide margins. Room captures the NES room Link
+occupies at pickup. Moving, zooming or resizing afterward keeps the captured
+area fixed; another stopwatch captures a new area. Current-build save states
+retain the pickup area and reject invalid area data before loading.
+
+Fresh profiles enable Seamless Overworld for adaptive widescreen by default.
+Existing explicit display and mod choices are preserved. This experimental
+mode keeps its documented local-play and cross-room interaction limits.
+Native in-game saves and settings retain their existing behavior.
+
 # v1.11.0 — HD rendering resolution
 
 Zelda Remastered HD can now use resident GPU rendering with a selectable
