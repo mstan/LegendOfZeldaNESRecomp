@@ -84,12 +84,13 @@ foreach ($target in $variants) {
         if (-not $framework) { $framework = Join-Path $root 'nesrecomp' }
         Copy-Item -LiteralPath (Join-Path $framework 'tools\package_hdpack.py') -Destination (Join-Path $stage 'tools')
         Copy-Item -LiteralPath (Join-Path $root 'hdpatch\ZeldaRemasteredReadme.txt') -Destination (Join-Path $stage 'hdpatch')
-        foreach ($doc in 'README.md', 'LICENSE') { Copy-Item -LiteralPath (Join-Path $root $doc) -Destination $stage }
+        foreach ($doc in 'README.md', 'LICENSE', 'PERMISSIONS.md') { Copy-Item -LiteralPath (Join-Path $root $doc) -Destination $stage }
         $ui = Get-CacheValue 'NESRECOMP_RECOMP_UI'
         if (-not $ui) { $ui = Get-CacheValue 'RECOMP_UI_ROOT' }
         if (-not $ui) { $ui = Join-Path $root 'recomp-ui' }
         $licenses = @{
             'Game-LICENSE.txt' = (Join-Path $root 'LICENSE')
+            'Game-PERMISSIONS.md' = (Join-Path $root 'PERMISSIONS.md')
             'NESRecomp-LICENSE.txt' = (Join-Path $framework 'LICENSE')
             'SDL2-COPYING.txt' = (Join-Path $framework 'runner/external/SDL2/COPYING.txt')
             'ImGui-LICENSE.txt' = (Join-Path $ui 'src/third_party/imgui/LICENSE.txt')
