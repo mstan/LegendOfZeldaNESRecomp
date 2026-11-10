@@ -1,3 +1,8 @@
+# v1.12.1 ? Player 1 keyboard remapping
+
+Keyboard changes captured in the launcher now persist across restarts and
+apply in gameplay. Existing native saves and display/mod choices are preserved.
+
 # v1.12.0 — Stopwatch freeze scopes
 
 Seamless Overworld now has a **Stopwatch scope** dropdown under its Gameplay

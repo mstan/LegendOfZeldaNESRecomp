@@ -125,6 +125,9 @@ foreach ($target in $variants) {
         $readme = @'
 The Legend of Zelda - USA/NTSC cycle preview
 
+v1.12.1 fixes Player 1 keyboard remaps entered in the launcher.
+They are now saved in the active game settings and used during gameplay.
+
 v1.12.0 adds Stopwatch scope under Seamless Overworld's Gameplay options:
 Entire map (the existing default), Current viewport, or Current room.
 Viewport and room are captured at pickup and stay fixed when moving,
