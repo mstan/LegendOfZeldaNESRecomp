@@ -24,9 +24,11 @@
 #   bash tools/build-linux.sh --out DIR       # where to drop the .AppImage
 #   bash tools/build-linux.sh --jobs N        # parallel build jobs (default: nproc)
 #
-# Prereqs: cmake, a C/C++ toolchain, libsdl2-dev, libgl1-mesa-dev, and the
-# AppImage tools at ~/recomp-tools/{linuxdeploy,appimagetool}. Regen needs a
-# verified ROM at the repo root (see tools/regen.sh).
+# Prereqs: cmake, a C/C++ toolchain, libsdl2-dev, libgl1-mesa-dev. For building
+# to AppImage you need the tools linuxdeploy and appimagetool saved at
+# ~/recomp-tools/{linuxdeploy,appimagetool}, or at a location specified by the
+# $RECOMP_TOOLS_LOCATION environment variable. Regen needs a verified ROM at the
+# repo root (see tools/regen.sh).
 set -euo pipefail
 # Cycle builds need the stock USA ROM with --rom PATH; HD packs are Mods.
 
@@ -137,7 +139,7 @@ echo "      ELF: $BIN ($(du -h "$BIN" | cut -f1))"
 if [ "$DO_PACKAGE" = "0" ]; then echo "      (--no-package) done."; exit 0; fi
 
 echo "[3/3] package AppImage"
-TOOLS="$HOME/recomp-tools"
+TOOLS="${RECOMP_TOOLS_LOCATION:-$HOME/recomp-tools}"
 LINUXDEPLOY="$TOOLS/linuxdeploy --appimage-extract-and-run"
 APPIMAGETOOL="$TOOLS/appimagetool --appimage-extract-and-run"
 mkdir -p "$OUT"
