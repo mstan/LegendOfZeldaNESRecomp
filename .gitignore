@@ -13,6 +13,7 @@ debug.ini
 *.cht
 disasm_ref/
 tmp_*.py
+.env
 
 # HD texture pack (user-supplied; never committed) + recompiler regen artifacts
 hdpack/
