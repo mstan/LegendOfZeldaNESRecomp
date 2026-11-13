@@ -77,5 +77,5 @@ const CycHdPackAdapter *zelda_redux_hd_adapter(void *ctx) {
     const char *suffix=p->id+sizeof(prefix)-1;
     if(suffix[0]<'0' || suffix[0]>'7' || suffix[1])return NULL;
     profile=(unsigned)(suffix[0]-'0');
-    static const CycHdPackAdapter adapter={rules,pattern,palette,visible,64};return &adapter;
+    static const CycHdPackAdapter adapter={rules,pattern,palette,visible,64,80};return &adapter;
 }

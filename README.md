@@ -143,8 +143,8 @@ that camera off and uses Redux's native viewport. Redux widescreen rendering is
 not supported. With the compatible Zelda Remastered package selected, Redux
 retains its program and native music while the supported Remastered 1.0.6 pack
 supplies matching graphics. Its game-specific adapter preserves Redux's HUD
-layout, uses compatible HD icons and gameplay art, and keeps new unmatched art
-native. Title, inventory and native save menus retain Redux's own presentation.
+layout: the LIFE meter and hearts use native pixels, compatible item icons
+retain HD art, and new unmatched art stays native. Title, inventory and native save menus retain Redux's own presentation.
 Other pack revisions require qualification before this combination can load.
 
 To build these optional programs, supply the unmodified
