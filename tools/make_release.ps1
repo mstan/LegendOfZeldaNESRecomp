@@ -114,7 +114,25 @@ foreach ($target in $variants) {
             'Game-PERMISSIONS.md' = (Join-Path $root 'PERMISSIONS.md')
             'NESRecomp-LICENSE.txt' = (Join-Path $framework 'LICENSE')
             'SDL2-COPYING.txt' = (Join-Path $framework 'runner/external/SDL2/COPYING.txt')
+            'recomp-ui-LICENSE.txt' = (Join-Path $ui 'LICENSE')
             'ImGui-LICENSE.txt' = (Join-Path $ui 'src/third_party/imgui/LICENSE.txt')
+        }
+        foreach ($dependency in @(
+            @{ Cache = 'recomp_net_SOURCE_DIR'; Notice = 'recomp-net-LICENSE.txt' },
+            @{ Cache = 'retcomm_rbengine_SOURCE_DIR'; Notice = 'retcomm-rbengine-LICENSE.txt' }
+        )) {
+            $sourceRoot = Get-CacheValue $dependency.Cache
+            if ($sourceRoot) { $licenses[$dependency.Notice] = Join-Path $sourceRoot 'LICENSE' }
+        }
+        foreach ($font in @(
+            @{ File = 'LatoLatin-Regular.ttf'; Notice = 'LatoLatin-OFL.txt' },
+            @{ File = 'LatoLatin-Bold.ttf'; Notice = 'LatoLatin-OFL.txt' },
+            @{ File = 'NotoSansSymbols2-Regular.ttf'; Notice = 'NotoSansSymbols2-OFL.txt' },
+            @{ File = 'OpenMoji-black-glyf.ttf'; Notice = 'OpenMoji-LICENSE.txt' }
+        )) {
+            if (Test-Path -LiteralPath (Join-Path $stage "assets/fonts/$($font.File)")) {
+                $licenses[$font.Notice] = Join-Path $framework "tools/release-licenses/$($font.Notice)"
+            }
         }
         New-Item -ItemType Directory -Path (Join-Path $stage 'licenses') | Out-Null
         foreach ($name in $licenses.Keys) {
