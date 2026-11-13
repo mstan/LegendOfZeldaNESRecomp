@@ -2,7 +2,8 @@
    powershell -File tools\make_release.ps1 -Rom "F:\ROMs\Legend of Zelda.NES"
    powershell -File tools\make_release.ps1 -SkipBuild
 #>
-param([string]$Rom, [switch]$SkipBuild, [string]$BuildDirectory, [string]$OutputDirectory)
+param([string]$Rom, [switch]$SkipBuild, [string]$BuildDirectory, [string]$OutputDirectory,
+      [string]$ReduxArchive, [string]$RemasteredPatch)
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $build = if ($BuildDirectory) { [IO.Path]::GetFullPath($BuildDirectory) } else { Join-Path $root 'build-cycle' }
@@ -49,8 +50,15 @@ if (-not $SkipBuild) {
     if (-not $cmake) { $cmake = 'C:\Program Files\CMake\bin\cmake.exe' }
     if (-not (Test-Path -LiteralPath $cmake)) { $cmake = (Get-Command cmake.exe -ErrorAction Stop).Source }
     $args = @('-S', $root, '-B', $build, '-DNESRECOMP_BACKEND=cycle', "-DNESRECOMP_ROM=$Rom")
+    if (-not $ReduxArchive) { $ReduxArchive = Get-CacheValue 'ZELDA_REDUX_ARCHIVE' }
+    if (-not $RemasteredPatch) { $RemasteredPatch = Get-CacheValue 'ZELDA_REMASTERED_PATCH' }
+    if ($ReduxArchive) {
+        if (-not $RemasteredPatch) { throw 'Redux builds require the supported Remastered patch.' }
+        $args += "-DZELDA_REDUX_ARCHIVE=$((Resolve-Path -LiteralPath $ReduxArchive).Path)"
+        $args += "-DZELDA_REMASTERED_PATCH=$((Resolve-Path -LiteralPath $RemasteredPatch).Path)"
+    }
     Invoke-HiddenBuild $cmake $args
-    Invoke-HiddenBuild $cmake @('--build', $build, '--config', 'Release')
+    Invoke-HiddenBuild $cmake @('--build', $build, '--config', 'Release', '--parallel', '1')
     $cache = Get-Content -LiteralPath $cachePath -Raw
 }
 if ((Get-CacheValue 'NESRECOMP_BACKEND') -ne 'cycle') { throw 'Refusing to package a legacy build.' }
@@ -77,6 +85,19 @@ foreach ($target in $variants) {
         }
         Copy-Item -LiteralPath (Join-Path $bin 'assets') -Recurse -Destination (Join-Path $stage 'assets')
         Copy-Item -LiteralPath (Join-Path $root 'mods\preloaded') -Recurse -Destination (Join-Path $stage 'mods')
+        if (Get-CacheValue 'ZELDA_REDUX_ARCHIVE') {
+            $reduxPackage = Join-Path $build 'redux/mods/packages/legend-of-zelda.redux/3.3.3'
+            foreach ($asset in 'manifest.toml', 'Zelda1_Redux.ips', 'optional/Like Like Rupees.ips',
+                     'optional/Zelda 1 & A New Light Dungeon Themes.ips', 'optional/Reworked Title Screen.ips',
+                     'ReadMe.md', 'LICENSE', 'Zelda1-Redux-source.zip') {
+                if (-not (Test-Path -LiteralPath (Join-Path $reduxPackage $asset) -PathType Leaf)) {
+                    throw "Missing compiled Redux package asset: $asset"
+                }
+            }
+            $reduxTarget = Join-Path $stage 'mods/packages/legend-of-zelda.redux'
+            New-Item -ItemType Directory -Path $reduxTarget | Out-Null
+            Copy-Item -LiteralPath $reduxPackage -Recurse -Destination $reduxTarget
+        }
         New-Item -ItemType Directory -Path (Join-Path $stage 'tools') | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $stage 'hdpatch') | Out-Null
         Copy-Item -LiteralPath (Join-Path $root 'tools\import_hdpack.py') -Destination (Join-Path $stage 'tools')
@@ -93,7 +114,25 @@ foreach ($target in $variants) {
             'Game-PERMISSIONS.md' = (Join-Path $root 'PERMISSIONS.md')
             'NESRecomp-LICENSE.txt' = (Join-Path $framework 'LICENSE')
             'SDL2-COPYING.txt' = (Join-Path $framework 'runner/external/SDL2/COPYING.txt')
+            'recomp-ui-LICENSE.txt' = (Join-Path $ui 'LICENSE')
             'ImGui-LICENSE.txt' = (Join-Path $ui 'src/third_party/imgui/LICENSE.txt')
+        }
+        foreach ($dependency in @(
+            @{ Cache = 'recomp_net_SOURCE_DIR'; Notice = 'recomp-net-LICENSE.txt' },
+            @{ Cache = 'retcomm_rbengine_SOURCE_DIR'; Notice = 'retcomm-rbengine-LICENSE.txt' }
+        )) {
+            $sourceRoot = Get-CacheValue $dependency.Cache
+            if ($sourceRoot) { $licenses[$dependency.Notice] = Join-Path $sourceRoot 'LICENSE' }
+        }
+        foreach ($font in @(
+            @{ File = 'LatoLatin-Regular.ttf'; Notice = 'LatoLatin-OFL.txt' },
+            @{ File = 'LatoLatin-Bold.ttf'; Notice = 'LatoLatin-OFL.txt' },
+            @{ File = 'NotoSansSymbols2-Regular.ttf'; Notice = 'NotoSansSymbols2-OFL.txt' },
+            @{ File = 'OpenMoji-black-glyf.ttf'; Notice = 'OpenMoji-LICENSE.txt' }
+        )) {
+            if (Test-Path -LiteralPath (Join-Path $stage "assets/fonts/$($font.File)")) {
+                $licenses[$font.Notice] = Join-Path $framework "tools/release-licenses/$($font.Notice)"
+            }
         }
         New-Item -ItemType Directory -Path (Join-Path $stage 'licenses') | Out-Null
         foreach ($name in $licenses.Keys) {
@@ -124,6 +163,13 @@ foreach ($target in $variants) {
         }
         $readme = @'
 The Legend of Zelda - USA/NTSC cycle preview
+
+Optional Redux 3.3.3 builds include Redux and its three companion Mods, all
+initially disabled. Select them before Play and restart to change them.
+Redux has separate battery progress shared by its companion combinations.
+The compatible Remastered1.0.6 pack supplies adapted graphics with the Redux
+HUD/menus/new art preserved. Redux uses its native viewport; Seamless Overworld
+requires the stock program. No Redux widescreen support is claimed.
 
 v1.12.1 fixes Player 1 keyboard remaps entered in the launcher.
 They are now saved in the active game settings and used during gameplay.
@@ -161,7 +207,7 @@ executable. Make a local .nesmod from your existing pack and stock ROM with:
 python tools/import_hdpack.py --pack "path/to/pack" --rom "path/to/stock.nes" --out "Zelda-Remastered.nesmod"
 Install it in Mods, then enable Zelda Remastered HD before Play. The shared
 framework verifies and applies its IPS in memory. Original files stay intact.
-Remastered replacement audio is not implemented; the original NES APU plays.
+Remastered supports replacement audio. Optional Redux uses its native game audio.
 
 Arrow keys: D-pad. Z: A. X: B. Enter: Start. Backslash: Select.
 Escape: menu/settings. Hold Tab: fast-forward. F7: state slots. F8: rewind.

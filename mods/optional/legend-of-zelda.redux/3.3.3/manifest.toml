@@ -1,0 +1,74 @@
+format_version = 1
+id = "legend-of-zelda.redux"
+version = "3.3.3"
+name = "The Legend of Zelda Redux"
+author = "ShadowOne333 and contributors; see included upstream credits"
+license = "GPL-3.0; complete upstream source and notices included"
+resolver = "declarative"
+
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "3fe272fb"
+
+[[feature]]
+id = "redux"
+name = "Zelda Redux 3.3.3"
+description = "Redux gameplay, manual saving, inventory improvements, maps and revised presentation. Progress is separate from stock. Restart to change. With Zelda Remastered selected, Redux keeps its program and music while using the pack's graphics."
+group = "Redux"
+default_enabled = false
+exclusive_groups = ["stock-program-renderer"]
+
+[[feature]]
+id = "like-like-rupees"
+name = "Like Likes consume rupees"
+description = "Like Likes take rupees instead of the shield. Requires Redux."
+group = "Redux"
+default_enabled = false
+requires = ["legend-of-zelda.redux/redux"]
+
+[[feature]]
+id = "dungeon-themes"
+name = "Zelda 1 and A New Light dungeon themes"
+description = "Use the original dungeon theme in odd dungeons and A New Light's theme in even dungeons. Requires Redux."
+group = "Redux"
+default_enabled = false
+requires = ["legend-of-zelda.redux/redux"]
+
+[[feature]]
+id = "title-screen"
+name = "Reworked title screen"
+description = "Use the release's reworked Zelda title screen. Requires Redux."
+group = "Redux"
+default_enabled = false
+requires = ["legend-of-zelda.redux/redux"]
+
+[[plugin]]
+feature = "redux"
+id = "zelda.redux.base"
+[[plugin]]
+feature = "like-like-rupees"
+id = "zelda.redux.like-like-rupees"
+[[plugin]]
+feature = "dungeon-themes"
+id = "zelda.redux.dungeon-themes"
+[[plugin]]
+feature = "title-screen"
+id = "zelda.redux.title-screen"
+
+[[cartridge_patch]]
+feature = "redux"
+path = "Zelda1_Redux.ips"
+order = 0
+hd_graphics = ["legend-of-zelda.remastered"]
+[[cartridge_patch]]
+feature = "like-like-rupees"
+path = "optional/Like Like Rupees.ips"
+order = 10
+[[cartridge_patch]]
+feature = "dungeon-themes"
+path = "optional/Zelda 1 & A New Light Dungeon Themes.ips"
+order = 20
+[[cartridge_patch]]
+feature = "title-screen"
+path = "optional/Reworked Title Screen.ips"
+order = 30

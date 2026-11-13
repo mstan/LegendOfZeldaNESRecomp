@@ -118,13 +118,44 @@ HD** before starting. It is disabled by default and shares an exclusion group
 with voxel views. The framework verifies the pack's IPS and applies it to an
 in-memory cartridge copy; your ROM stays unchanged. The included pack creator
 notice is preserved. Texture/background presentation uses the original PPU;
-replacement music and sound files remain unsupported. To return to stock,
+replacement music and sound effects are supported. To return to stock,
 disable the feature in the launcher and restart. Pack/patch selection is
 read-only during gameplay, and save states require matching assets and options.
 
 With Remastered enabled, choose **Graphics → HD resolution** in the in-game
 settings. **Pack resolution** keeps the pack's original size; you can also choose
 1× through 16×. The 32× and 64× choices are experimental.
+
+## Optional Zelda Redux
+
+Redux-enabled cycle builds expose **Zelda Redux 3.3.3** and its three optional
+companions under **Mods → Redux**: Like Likes consume rupees, Zelda 1 and A New
+Light dungeon themes, and Reworked title screen. All four default to disabled.
+Selecting a companion also selects Redux. Change these before PLAY and restart
+to switch programs; the original USA PRG0 ROM remains unchanged.
+
+Redux progress uses `saves/<ROM stem>.legend-of-zelda.redux.sav`, separate from
+stock progress. All companion combinations share that Redux save. In Redux,
+press **Up+A while paused** to open the native Continue/Save/Retry menu.
+
+Seamless Overworld requires the stock program. Selecting Redux visibly turns
+that camera off and uses Redux's native viewport. Redux widescreen rendering is
+not supported. With the compatible Zelda Remastered package selected, Redux
+retains its program and native music while the supported Remastered 1.0.6 pack
+supplies matching graphics. Its game-specific adapter preserves Redux's HUD
+layout: the LIFE meter and hearts use native pixels, compatible item icons
+retain HD art, and new unmatched art stays native. Title, inventory and native save menus retain Redux's own presentation.
+Other pack revisions require qualification before this combination can load.
+
+To build these optional programs, supply the unmodified
+[official Redux 3.3.3 release archive](https://github.com/ShadowOne333/The-Legend-of-Zelda-Redux/releases/tag/v3.3.3)
+with `-DZELDA_REDUX_ARCHIVE=/path/to/Zelda1-Redux.zip` and the supported
+Remastered 1.0.6 `ZeldaHD.ips` with
+`-DZELDA_REMASTERED_PATCH=/path/to/ZeldaHD.ips`. The latter preserves the existing
+Remastered-only program in the catalog. The build verifies the inputs and
+generates ten separate native programs: stock, Remastered, and all eight Redux
+combinations. It stages the optional package with the upstream source archive,
+license and credits. No patched ROM is installed as a mod or committed here.
 
 ## Voxel 3D (experimental)
 
@@ -202,9 +233,14 @@ cmake --build build-cycle --config Release
 
 Choose the same USA PRG0 ROM at runtime. Remastered uses the Mods importer above. For an explicit legacy build, see [cycle migration notes](docs/CYCLE-MIGRATION.md).
 
+The local Windows packaging helper accepts the same optional inputs as
+`-ReduxArchive` and `-RemasteredPatch`, or reuses them from the configured build.
+It includes the four verified patches and their unmodified source/license
+archive when that native catalog is built. No ROM or HD art is packaged.
+
 ## Architecture
 
-The original 6502 code is translated to cycle-aware C and compiled to native code. Unprofiled code and cartridge work-RAM code safely use the cycle interpreter. The PPU, APU and mapper advance with the guest CPU.
+The original 6502 code is translated to cycle-aware C and compiled to native code. Qualified copied work-RAM code also executes natively; unprofiled or changed code safely uses the cycle interpreter. The PPU, APU and mapper advance with the guest CPU.
 
 - `config/cycle/` — default cycle configuration, seeds and capture inputs
 - `config/legacy/` — retained legacy compiler configuration and disassembly symbols
@@ -221,7 +257,7 @@ The original 6502 code is translated to cycle-aware C and compiled to native cod
 
 ## Known Limitations
 
-- Remastered preserves the existing sampler limitations for unsupported conditions or missing images. HD-pack replacement music and sound files remain unsupported.
+- Remastered preserves the existing sampler limitations for unsupported conditions or missing images. Its standalone HD package supports replacement audio; Redux uses the graphics adaptation with native game audio, including the optional dungeon themes.
 - Legacy binary save states do not transfer to the cycle backend. Raw battery progress remains portable.
 - Voxel views retain their existing experimental camera and geometry limitations.
 - Seamless Overworld remains experimental; its current limitations are listed above.

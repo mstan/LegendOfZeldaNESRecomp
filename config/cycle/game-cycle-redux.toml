@@ -1,0 +1,11 @@
+[game]
+name = "The Legend of Zelda Redux 3.3.3"
+output_prefix = "zelda_redux"
+console = "nes"
+cycle_accurate = true
+
+[[sram_map]]
+sram_start = 0x6C90
+rom_start = 0xA500
+bank = 1
+size = 0x1370

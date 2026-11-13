@@ -152,8 +152,15 @@ static const CycHostOption options[]={
     {"--hdpack",true,"Remastered texture pack directory, or off"},
 #endif
 };
+#ifdef ZELDA_REDUX
+extern const CycHdPackAdapter *zelda_redux_hd_adapter(void *);
+#endif
 const CycHostExtras *cyc_host_extras(void) {
     static const CycHostExtras extras={.present=present,.power_on=power_on,.frame_end=frame_end,
-        .input=input,.event=event,.options=options,.option_count=sizeof(options)/sizeof(options[0]),.option=option,.tcp_setup=tcp_setup,.state_loaded=state_loaded};
+        .input=input,.event=event,.options=options,.option_count=sizeof(options)/sizeof(options[0]),.option=option,.tcp_setup=tcp_setup,.state_loaded=state_loaded
+#ifdef ZELDA_REDUX
+        ,.hdpack_adapter=zelda_redux_hd_adapter
+#endif
+    };
     return &extras;
 }
