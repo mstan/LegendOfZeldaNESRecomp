@@ -32,10 +32,30 @@ endif()
 if(NESRECOMP_BACKEND STREQUAL "cycle")
     set(NESRECOMP_ROM "" CACHE FILEPATH "Original Zelda USA PRG0 ROM, not distributed")
     set(NESRECOMP_HOST_COMPILER "" CACHE FILEPATH "Optional prebuilt compiler")
+    set(ZELDA_REDUX_ARCHIVE "" CACHE FILEPATH "Official Redux 3.3.3 Zelda1-Redux.zip, optional")
+    set(ZELDA_REMASTERED_PATCH "" CACHE FILEPATH "Zelda Remastered 1.0.6 ZeldaHD.ips for the optional program catalog")
     include("${NESRECOMP_ROOT}/runner/cyc/project.cmake")
+    if(ZELDA_REDUX_ARCHIVE)
+        if(NOT ZELDA_REMASTERED_PATCH)
+            message(FATAL_ERROR "A Redux program-catalog build also needs ZELDA_REMASTERED_PATCH (ZeldaHD.ips) to preserve existing HD-only support")
+        endif()
+        find_package(Python3 3.11 REQUIRED COMPONENTS Interpreter)
+        set(ZELDA_REDUX_ROOT "${CMAKE_CURRENT_BINARY_DIR}/redux")
+        execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tools/redux_profiles.py"
+            --archive "${ZELDA_REDUX_ARCHIVE}" --rom "${NESRECOMP_ROM}" --hd-patch "${ZELDA_REMASTERED_PATCH}" --out "${ZELDA_REDUX_ROOT}"
+            RESULT_VARIABLE redux_result OUTPUT_VARIABLE redux_output ERROR_VARIABLE redux_error)
+        if(NOT redux_result EQUAL 0)
+            message(FATAL_ERROR "Redux input verification failed:\n${redux_output}\n${redux_error}")
+        endif()
+        set(ZELDA_NAMESPACE NAMESPACE zelda_stock)
+        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${ZELDA_REDUX_ARCHIVE}"
+            "${ZELDA_REMASTERED_PATCH}"
+            "${CMAKE_CURRENT_SOURCE_DIR}/tools/redux_profiles.py"
+            "${CMAKE_CURRENT_SOURCE_DIR}/mods/optional/legend-of-zelda.redux/3.3.3/manifest.toml")
+    endif()
     function(add_zelda_cycle TARGET VARIANT ROM)
         nesrecomp_add_cycle_game(${TARGET}
-            ROM "${ROM}" GAME_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/config/cycle/game-cycle-${VARIANT}.toml"
+            ROM "${ROM}" GAME_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/config/cycle/game-cycle-${VARIANT}.toml" ${ZELDA_NAMESPACE}
             RECOMPILER "${NESRECOMP_HOST_COMPILER}" SEED_FILE "${CMAKE_CURRENT_SOURCE_DIR}/config/cycle/cyc_seeds_${VARIANT}.txt"
             CAPTURE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/config/cycle/cyc_captures_${VARIANT}.txt"
             MODS HD_PACKS GAME_ID "legend-of-zelda-us" PLAYERS 1 REGION NTSC
@@ -59,6 +79,25 @@ if(NESRECOMP_BACKEND STREQUAL "cycle")
                 "${CMAKE_CURRENT_SOURCE_DIR}/mods/preloaded" "$<TARGET_FILE_DIR:${TARGET}>/mods")
     endfunction()
     add_zelda_cycle(LegendOfZeldaNESRecomp stock "${NESRECOMP_ROM}")
+    if(ZELDA_REDUX_ARCHIVE)
+        foreach(mask RANGE 0 7)
+            nesrecomp_add_cycle_program(LegendOfZeldaNESRecomp
+                ROM "${ZELDA_REDUX_ROOT}/redux-${mask}.nes" NAMESPACE "zelda_redux_${mask}"
+                GAME_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/config/cycle/game-cycle-redux.toml"
+                SEED_FILE "${CMAKE_CURRENT_SOURCE_DIR}/config/cycle/cyc_seeds_redux.txt")
+        endforeach()
+        nesrecomp_add_cycle_program(LegendOfZeldaNESRecomp
+            ROM "${ZELDA_REDUX_ROOT}/remastered.nes" NAMESPACE zelda_remastered
+            GAME_CONFIG "${CMAKE_CURRENT_SOURCE_DIR}/config/cycle/game-cycle-remastered.toml"
+            SEED_FILE "${CMAKE_CURRENT_SOURCE_DIR}/config/cycle/cyc_seeds_stock.txt")
+        nesrecomp_enable_native_programs(LegendOfZeldaNESRecomp)
+        target_sources(LegendOfZeldaNESRecomp PRIVATE src/zelda_redux.c src/zelda_redux_hd.c)
+        target_include_directories(LegendOfZeldaNESRecomp PRIVATE "${ZELDA_REDUX_ROOT}")
+        target_compile_definitions(LegendOfZeldaNESRecomp PRIVATE ZELDA_REDUX=1)
+        add_custom_command(TARGET LegendOfZeldaNESRecomp POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_directory "${ZELDA_REDUX_ROOT}/mods"
+                "$<TARGET_FILE_DIR:LegendOfZeldaNESRecomp>/mods")
+    endif()
     option(ZELDA_TEST_NATIVE_JOBS "Build ROM-backed isolated memory-job oracle" OFF)
     if(ZELDA_TEST_NATIVE_JOBS)
         target_sources(LegendOfZeldaNESRecomp PRIVATE tests/native_sprite_service.c)
