@@ -77,6 +77,13 @@ foreach ($target in $variants) {
         }
         Copy-Item -LiteralPath (Join-Path $bin 'assets') -Recurse -Destination (Join-Path $stage 'assets')
         Copy-Item -LiteralPath (Join-Path $root 'mods\preloaded') -Recurse -Destination (Join-Path $stage 'mods')
+        foreach ($packageId in 'nesrecomp.developer.replay', 'nesrecomp.twitch-chat') {
+            $generated = Join-Path $bin "mods/packages/$packageId/1.0.0/manifest.toml"
+            if (-not (Test-Path -LiteralPath $generated -PathType Leaf)) { throw "Missing generated framework manifest: $packageId" }
+            $destination = Join-Path $stage "mods/packages/$packageId/1.0.0"
+            New-Item -ItemType Directory -Path $destination | Out-Null
+            Copy-Item -LiteralPath $generated -Destination $destination
+        }
         New-Item -ItemType Directory -Path (Join-Path $stage 'tools') | Out-Null
         New-Item -ItemType Directory -Path (Join-Path $stage 'hdpatch') | Out-Null
         Copy-Item -LiteralPath (Join-Path $root 'tools\import_hdpack.py') -Destination (Join-Path $stage 'tools')
@@ -94,6 +101,24 @@ foreach ($target in $variants) {
             'NESRecomp-LICENSE.txt' = (Join-Path $framework 'LICENSE')
             'SDL2-COPYING.txt' = (Join-Path $framework 'runner/external/SDL2/COPYING.txt')
             'ImGui-LICENSE.txt' = (Join-Path $ui 'src/third_party/imgui/LICENSE.txt')
+            'RecompUI-LICENSE.txt' = (Join-Path $ui 'LICENSE')
+            'LatoLatin-OFL.txt' = (Join-Path $framework 'tools/release-licenses/LatoLatin-OFL.txt')
+            'NotoSansSymbols2-OFL.txt' = (Join-Path $framework 'tools/release-licenses/NotoSansSymbols2-OFL.txt')
+            'OpenMoji-LICENSE.txt' = (Join-Path $framework 'tools/release-licenses/OpenMoji-LICENSE.txt')
+        }
+        foreach ($dependency in @(
+            @{ Cache = 'recomp_net_SOURCE_DIR'; Notice = 'RecompNet-LICENSE.txt' },
+            @{ Cache = 'retcomm_rbengine_SOURCE_DIR'; Notice = 'RBEngine-LICENSE.txt' }
+        )) {
+            $configured = Get-CacheValue $dependency.Cache
+            if ($configured) { $licenses[$dependency.Notice] = Join-Path $configured 'LICENSE' }
+        }
+        if (Test-Path -LiteralPath (Join-Path $stage 'libstdc++-6.dll')) {
+            $compilerPrefix = Split-Path -Parent (Split-Path -Parent (Get-CacheValue 'CMAKE_CXX_COMPILER'))
+            foreach ($name in 'COPYING.LIB', 'COPYING.RUNTIME', 'COPYING3', 'README') {
+                $licenses["GCC-$name.txt"] = Join-Path $compilerPrefix "share/licenses/gcc-libs/$name"
+            }
+            $licenses['libwinpthread-COPYING.txt'] = Join-Path $compilerPrefix 'share/licenses/libwinpthread/COPYING'
         }
         New-Item -ItemType Directory -Path (Join-Path $stage 'licenses') | Out-Null
         foreach ($name in $licenses.Keys) {
