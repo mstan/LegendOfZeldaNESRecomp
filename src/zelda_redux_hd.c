@@ -31,9 +31,9 @@ static void palette(void *ctx,uint8_t pal[4]) {
 static bool visible(void *ctx) {
     (void)ctx;if(!g_ram)return false;unsigned mode=g_ram[0x12];
     /* Keep title/file selection and paused inventory/save menus native. The
-     * pack is prepared before play: level loading must stay HD too, so the
-     * new room does not flash native graphics before gameplay begins. */
-    return ((mode>=2 && mode<=7) || mode==11) && !g_ram[0xe0];
+     * pack is prepared before play: level loading and the native cave walk
+     * must stay HD too, so transitions do not flash native graphics. */
+    return ((mode>=2 && mode<=7) || mode==11 || mode==0x10) && !g_ram[0xe0];
 }
 static bool rules(void *ctx,const char *directory,char **out) {
     (void)ctx;*out=NULL;char path[1200];
