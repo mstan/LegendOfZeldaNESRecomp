@@ -41,3 +41,8 @@ build-*/
 
 # Machine-local logs, reports and archived build helpers
 /local/
+
+# Cartridge dumps never enter the tree: a local roms/ folder is ignored
+roms/
+*.unf
+*.unif

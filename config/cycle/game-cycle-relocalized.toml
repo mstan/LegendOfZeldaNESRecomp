@@ -1,0 +1,61 @@
+# Build profile for the fan translation / font-mod / Relocalized Nintendo
+# cartridge image:
+#   "Legend of Zelda, The (USA) [T-Eng by SimpleDanny v1.1]
+#    [Add by Snarfblam v0.2] [Font mod] [Relocalized].nes"
+# PRG payload CRC32 397b56a6, SHA-256 of the payload after the 16-byte iNES
+# header is recorded by the build (CYC_PROJECT_LAUNCHER_SHA256).
+#
+# The translation, font and text reinsertion live in the cartridge's data
+# banks: every executable region this profile pins down (the seven
+# [[mod_function_hook]] signatures below, the SRAM-mapped startup copy and the
+# interpreter seed list) is byte-identical to the USA PRG0 image, so the USA
+# profile's discovery inputs stay valid for this image. Verified at configure
+# time: codegen reports no unmatched [[mod_function_hook]] entry.
+[game]
+name = "The Legend of Zelda (USA) Relocalized"
+output_prefix = "zelda_stock"
+console = "nes"
+cycle_accurate = true
+
+# Original startup copy, also documented by the legacy backend. Generation
+# reads the input ROM; runtime requires matching bytes in stable visible SRAM.
+[[sram_map]]
+sram_start = 0x6C90
+rom_start = 0xA500
+bank = 1
+size = 0x1370
+
+[[mod_function_hook]]
+id = "zelda.world.stopwatch"
+addr = 0x73B5
+bytes = "99 57 06 60 A0 04"
+
+[[mod_function_hook]]
+id = "zelda.world.edge"
+addr = 0xF161
+bytes = "A6 84 AD F8 03 F0"
+
+[[mod_function_hook]]
+id = "zelda.world.player"
+addr = 0xEDA0
+bytes = "A2 00 20 98 FE A5"
+
+[[mod_function_hook]]
+id = "zelda.world.moving-tile"
+addr = 0xEDFA
+bytes = "A0 F8 E0 00 F0 02"
+
+[[mod_function_hook]]
+id = "zelda.world.still-tile"
+addr = 0xEDF4
+bytes = "A0 00 84 0F F0 16"
+
+[[mod_function_hook]]
+id = "zelda.world.doorway"
+addr = 0x917C
+bytes = "A5 53 D0 22 A5 98"
+
+[[mod_function_hook]]
+id = "zelda.world.sprite-reset"
+addr = 0x6E1D
+bytes = "A2 60 A9 F8 9D 00 02 E8 E8 E8 E8 E0 00 D0 F5 AD"

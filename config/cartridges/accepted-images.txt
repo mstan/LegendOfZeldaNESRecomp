@@ -1,0 +1,28 @@
+# Cartridge images this build accepts, identified by hashes only.
+#
+# The ROM files themselves are never part of this repository: supply your own
+# dumps (see README). Configure reads this file, so the runtime acceptance
+# table (zelda_accepted_images.c) and the launcher's SHA-256 allowlist are
+# complete no matter which images a particular machine happens to have.
+#
+# Format: crc32|fnv1a|sha256|file name
+#   crc32   CRC-32 of the cartridge payload (after the 16-byte iNES header),
+#           the identity the preloaded mod packages advertise
+#   fnv1a   FNV-1a of the PRG payload, the value cyc_prg_hash() compares
+#   sha256  SHA-256 of the cartridge payload, what the launcher matches
+#
+# Only images whose executable layout matches the compiled one belong here: the
+# same [[mod_function_hook]] signatures, RAM-code copy and seed addresses. The
+# PRG guards still verify every compiled byte, so an accepted image that is not
+# the compiled one runs on the cycle-accurate interpreter.
+#
+# USA PRG0 retail image; the code is generated from this dump.
+3fe272fb|2e04b72c|085e5397a3487357c263dfa159fb0fe20a5f3ea8ef82d7af6a7e848d3b9364e8|Legend of Zelda, The (USA) ENG.nes
+# USA PRG0 with the Russian translation.
+c452304e|5f807d30|8e41e52e11ee5901c68ae5643463b3fe33b4a90665383d2babc622e993f30ee5|Legend of Zelda, The (USA) RUS.nes
+# USA PRG1 (V1.1).
+397b56a6|5c09ee2d|5106df94d64356845a6b7cafaea857503425297a97290d791e16832ab0b0f094|Legend of Zelda, The (USA) (V1.1) ENG.nes
+# USA PRG1 with the Russian translation.
+75df5631|fa491e19|5d4241bb4c906d7b6d46e6d7f0a673e8b5ddcd2aadab661daf22c115313fdace|Legend of Zelda (USA) (V1.1) RUS.nes
+# USA PRG0 with the Redux HD patch (generated at build time from the IPS).
+67e03149|1cf37afc|2edee6fd422f5bfa1a0b7957a687d43eb5d0276eca989684ec992463cbd10f1a|Legend of Zelda, The (USA) Redux.nes

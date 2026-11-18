@@ -103,15 +103,33 @@ static uint32_t crc32(const uint8_t *p,size_t n) {
     while(n--) { crc^=*p++;for(int b=0;b<8;b++)crc=(crc>>1)^((0u-(crc&1))&0xedb88320u); }
     return ~crc;
 }
+/* Images this decoder may run. It is not a reimplementation of the room
+ * builder: decode_to() enters this image's OWN routines on an isolated machine
+ * (SwitchBank $FFAC, then $A8C4 and $83D7 in bank 5) and reads back the room
+ * they built. The gate therefore proves that those entry points still hold the
+ * expected code; it does not pin a single dump.
+ *  3fe272fb  USA PRG0 reference image (upstream target)
+ *  c452304e  another USA dump: the $A8C4/$83D7 entry bytes and the SwitchBank
+ *            body are byte-identical to the reference, and zelda_world_probe()
+ *            reports decoded tiles/attributes equal to the live room
+ *  397b56a6  SimpleDanny/Snarfblam translation + font mod image: same entries
+ * Any other payload keeps the original display. */
+static const uint32_t known_images[]={0x3fe272fbu,0xc452304eu,0x397b56a6u};
 bool zelda_world_supported(void) {
     if(!checked_rom) {
         size_t n=cyc_mod_copy_cart_payload(NULL,0);
         if(n==128u*1024u) {
             uint8_t *prg=malloc(n);
-            if(prg) { cyc_mod_copy_cart_payload(prg,n);supported_rom=crc32(prg,n)==0x3fe272fbu;free(prg); }
+            if(prg) {
+                cyc_mod_copy_cart_payload(prg,n);
+                uint32_t crc=crc32(prg,n);
+                for(size_t i=0;i<sizeof known_images/sizeof known_images[0];i++)
+                    if(crc==known_images[i])supported_rom=true;
+                if(!supported_rom)fprintf(stderr,"[zelda world] image %08X is not a supported cartridge; original display retained\n",crc);
+                free(prg);
+            }
         }
         checked_rom=true;
-        if(!supported_rom)fprintf(stderr,"[zelda world] requires unmodified USA PRG0 ROM; original display retained\n");
     }
     return supported_rom;
 }
