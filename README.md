@@ -202,6 +202,78 @@ cmake --build build-cycle --config Release
 
 Choose the same USA PRG0 ROM at runtime. Remastered uses the Mods importer above. For an explicit legacy build, see [cycle migration notes](docs/CYCLE-MIGRATION.md).
 
+### Supported cartridge images
+
+`NESRECOMP_ROM` decides which image the build is recompiled from: its PRG
+hash, launcher SHA-256 and mod image identity are all derived from that file,
+so the executable only accepts that image. `ZELDA_ROM_VARIANT` selects the
+recompiler profile under `config/cycle/` — the discovery inputs (game config,
+interpreter seed list, RAM captures) used to translate the code:
+
+| Variant | Image | Payload CRC32 |
+|---------|-------|---------------|
+| `stock` (default) | USA retail, e.g. the dump the profile was captured from | `3fe272fb` |
+| `stock` (default) | another USA dump of the same program revision | `c452304e` |
+| `relocalized` | SimpleDanny v1.1 translation + Snarfblam "Add" + font mod + Relocalized | `397b56a6` |
+
+The profile describes *how* the code is discovered; the image identity is
+always hashed from the file you pass, so several dumps of one title can build
+under the same profile. Both USA dumps above were built with `stock`: 8 807
+instructions compiled, no unmatched `[[mod_function_hook]]`, and 1 800 frames
+in which the native output matches `--interp-only` frame for frame.
+
+```bash
+cmake -S . -B build-relocalized -G "Visual Studio 17 2022" -A x64 \
+  -DZELDA_ROM_VARIANT=relocalized \
+  -DNESRECOMP_ROM="F:/ROMs/Legend of Zelda (Relocalized).nes"
+cmake --build build-relocalized --config Release
+```
+
+The `relocalized` profile keeps the retail profile's discovery inputs because
+the hack changes cartridge data (text, font, tilemaps), not the executable
+layout: every `[[mod_function_hook]]` signature, the SRAM-mapped startup copy
+and the interpreter seed addresses match the retail image, which the
+recompiler reports at configure time (an unmatched hook is a warning, and this
+profile builds without one). See [ROM header compatibility](docs/ROM_HEADERS.md).
+
+A MinGW/GCC build stages the compiler's own runtime DLLs (`libstdc++-6.dll`,
+`libgcc_s_seh-1.dll`, `libwinpthread-1.dll`) beside the executable, the way the
+MSVC build stages the VC runtime; without them the program fails in the loader
+with `0xC0000135` on a machine that has no toolchain on `PATH`.
+
+The three experimental packs (Seamless Overworld and both Voxel 3D views)
+declare all of the images above, and `zelda_world_supported()` accepts their
+payload CRCs: the room decoder runs the image's own routines at `$FFAC`,
+`$A8C4` and `$83D7`, which are intact in every listed image. The visual result
+on the non-reference images is not yet verified — see
+[ROM header compatibility](docs/ROM_HEADERS.md).
+
+### One executable for several images
+
+The images this executable accepts are described by hashes in
+`config/cartridges/accepted-images.txt`. Cartridge data is never part of this
+repository, so the list cannot be derived from ROM files a given machine happens
+to have: every listed image is baked into `cyc_game_image_accepted()`
+(`src/cyc_extras.c`) and into the launcher's SHA-256 allowlist, and the mod
+catalog follows the loaded image through `nes_mod_runtime_retarget_c()`, so the
+packages' `[[target]]` lists decide what serves which image.
+
+`NESRECOMP_ROM` is the image the code is generated from. `ZELDA_EXTRA_ROMS`
+(optional, `;` separated paths) lets a local build point at images it has on
+disk; an image that is not listed in the manifest is still accepted for that
+build, with a warning. To accept a dump permanently, add its
+`crc32|fnv1a|sha256|name` line to the manifest.
+
+A secondary image runs on the cycle-accurate interpreter, not on the compiled
+blocks: the compiler bakes the ROM bytes it can prove into constants, so blocks
+generated from one image do not reproduce another — measured as a per-cycle
+trace divergence at identical memory, registers and cycle counts. The
+interpreter is exact for any image and still runs this title at roughly 160
+frames/s headless, well above the 60 Hz the host paces. Acceptance is therefore
+"this executable runs your image", not "the native blocks are image-neutral".
+
+
+
 ## Architecture
 
 The original 6502 code is translated to cycle-aware C and compiled to native code. Unprofiled code and cartridge work-RAM code safely use the cycle interpreter. The PPU, APU and mapper advance with the guest CPU.

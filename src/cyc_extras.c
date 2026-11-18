@@ -157,3 +157,11 @@ const CycHostExtras *cyc_host_extras(void) {
         .input=input,.event=event,.options=options,.option_count=sizeof(options)/sizeof(options[0]),.option=option,.tcp_setup=tcp_setup,.state_loaded=state_loaded};
     return &extras;
 }
+
+/* One executable for several cartridge images: the accepted table lives in the
+ * generated zelda_accepted_images.c, built by CMakeLists.txt from NESRECOMP_ROM
+ * plus ZELDA_EXTRA_ROMS (see docs/ROM_HEADERS.md). The translation and font-mod
+ * images change the cartridge's data banks, not its executable layout, so code
+ * generated from the retail image is valid for them; an image other than the
+ * compiled one runs on the cycle-accurate interpreter, because the compiler
+ * bakes ROM bytes into constants. */

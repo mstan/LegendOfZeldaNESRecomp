@@ -12,9 +12,22 @@ save_compatibility = "stock"
 game_id = "legend-of-zelda-us"
 rom_crc32 = "3fe272fb"
 
+# USA dumps and the translation image built from this checkout. Their code
+# layout keeps the decoder entries this body relies on: the room builder it
+# calls ($A8C4 / $83D7 in bank 5) and SwitchBank ($FFAC) are real instruction
+# starts, and $A8C4/$83D7 are byte-identical to the reference image.
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "c452304e"
+
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "397b56a6"
+
 [[feature]]
 id = "voxel-first-person"
 name = "Voxel 3D First Person (Experimental)"
+experimental = true
 camera_controls = true
 description = "Tracks Link through the reconstructed room with right-stick look and camera-relative left-stick movement while retaining enemies, items, terrain, shadows, and the original HUD. Experimental."
 group = "Display"

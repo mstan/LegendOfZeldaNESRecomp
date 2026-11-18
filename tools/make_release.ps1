@@ -2,7 +2,7 @@
    powershell -File tools\make_release.ps1 -Rom "F:\ROMs\Legend of Zelda.NES"
    powershell -File tools\make_release.ps1 -SkipBuild
 #>
-param([string]$Rom, [switch]$SkipBuild, [string]$BuildDirectory, [string]$OutputDirectory)
+param([string]$Rom, [string]$Variant, [switch]$SkipBuild, [string]$BuildDirectory, [string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
 $root = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $build = if ($BuildDirectory) { [IO.Path]::GetFullPath($BuildDirectory) } else { Join-Path $root 'build-cycle' }
@@ -49,6 +49,10 @@ if (-not $SkipBuild) {
     if (-not $cmake) { $cmake = 'C:\Program Files\CMake\bin\cmake.exe' }
     if (-not (Test-Path -LiteralPath $cmake)) { $cmake = (Get-Command cmake.exe -ErrorAction Stop).Source }
     $args = @('-S', $root, '-B', $build, '-DNESRECOMP_BACKEND=cycle', "-DNESRECOMP_ROM=$Rom")
+    # Cartridge profile (config/cycle/game-cycle-<variant>.toml); the default
+    # stock profile comes from the project, so only pass an explicit choice.
+    if (-not $Variant) { $Variant = Get-CacheValue 'ZELDA_ROM_VARIANT' }
+    if ($Variant) { $args += "-DZELDA_ROM_VARIANT=$Variant" }
     Invoke-HiddenBuild $cmake $args
     Invoke-HiddenBuild $cmake @('--build', $build, '--config', 'Release')
     $cache = Get-Content -LiteralPath $cachePath -Raw

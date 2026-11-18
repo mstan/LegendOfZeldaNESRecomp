@@ -12,6 +12,18 @@ save_compatibility = "seamless-world-preview"
 game_id = "legend-of-zelda-us"
 rom_crc32 = "3fe272fb"
 
+# USA dumps and the translation image built from this checkout. Their code
+# layout keeps the decoder entries this body relies on: the room builder it
+# calls ($A8C4 / $83D7 in bank 5) and SwitchBank ($FFAC) are real instruction
+# starts, and $A8C4/$83D7 are byte-identical to the reference image.
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "c452304e"
+
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "397b56a6"
+
 [[feature]]
 id = "seamless-world"
 name = "Seamless Overworld"
