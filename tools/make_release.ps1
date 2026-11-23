@@ -130,7 +130,7 @@ foreach ($target in $variants) {
             Copy-Item -LiteralPath $licenses[$name] -Destination (Join-Path $stage "licenses/$name")
         }
         New-Item -ItemType Directory -Path (Join-Path $stage 'docs\assets') | Out-Null
-        foreach ($doc in 'CYCLE-MIGRATION.md', 'RELEASE_NOTES.md', 'DIAGNOSTICS.md', 'SEAMLESS-WORLD.md') {
+        foreach ($doc in 'CYCLE-MIGRATION.md', 'RELEASE_NOTES.md', 'DIAGNOSTICS.md', 'SEAMLESS-WORLD.md', 'ROM_HEADERS.md') {
             Copy-Item -LiteralPath (Join-Path $root "docs\$doc") -Destination (Join-Path $stage 'docs')
         }
         foreach ($image in 'seamless-overworld.png', 'seamless-dungeon.png', 'seamless-atlas.png', 'voxel-3d.webp') {
@@ -184,9 +184,12 @@ Local play only; cross-room enemy/projectile interactions remain incomplete,
 whole-map simulation is slower, and broader full-game coverage remains open.
 README.md includes real overworld, dungeon and whole-map pictures.
 
-No ROM or third-party HD art is included. Select your stock USA PRG0 ROM,
-payload CRC32 3fe272fb, for every mode. Remastered is a modern Mod in the same
-executable. Make a local .nesmod from your existing pack and stock ROM with:
+Supply your own ROM. The stock USA PRG0 image (payload CRC32 3fe272fb) runs
+compiled code. The alternate images listed in docs/ROM_HEADERS.md run on the
+cycle-accurate interpreter. Available Mods depend on the selected image.
+
+Remastered is a Mod for the stock ROM. Make a local .nesmod from an existing
+Remastered pack and your stock ROM with:
 python tools/import_hdpack.py --pack "path/to/pack" --rom "path/to/stock.nes" --out "Zelda-Remastered.nesmod"
 Install it in Mods, then enable Zelda Remastered HD before Play. The shared
 framework verifies and applies its IPS in memory. Original files stay intact.
