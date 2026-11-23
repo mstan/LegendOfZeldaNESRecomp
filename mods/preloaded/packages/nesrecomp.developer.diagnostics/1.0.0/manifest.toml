@@ -12,6 +12,20 @@ save_compatibility = "stock"
 game_id = "legend-of-zelda-us"
 rom_crc32 = "3fe272fb"
 
+# SimpleDanny/Snarfblam translation + font mod ("Relocalized") image. Its
+# executable code layout matches the retail image - every [[mod_function_hook]]
+# declared in config/cycle/game-cycle-relocalized.toml matches at codegen time -
+# but the cartridge data differs, so the image carries its own identity.
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "397b56a6"
+
+# Another USA dump of the same program revision (payload CRC32 c452304e).
+# Diagnostics only reads the host: it has no cartridge assumptions.
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "c452304e"
+
 [[feature]]
 id = "diagnostics"
 name = "Startup and Crash Diagnostics"

@@ -1,0 +1,5 @@
+// The program icon: IDI_ICON1 in the executable.
+//   zelda.png - original artwork (128x128 RGBA)
+//   zelda.ico - generated from it: 16, 24, 32, 48, 64, 128, 256 px
+// CMakeLists.txt embeds the .ico; this file is the readable source it mirrors.
+IDI_ICON1 ICON "zelda.ico"
