@@ -184,7 +184,8 @@ bool cyc_game_image_accepted(uint32_t prg_hash) {
             CAPTURE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/config/cycle/cyc_captures_${VARIANT}.txt"
             MODS HD_PACKS GAME_ID "legend-of-zelda-us" PLAYERS 1 REGION NTSC
             BOXART "${CMAKE_CURRENT_SOURCE_DIR}/assets/boxart.tga"
-            HOST_EXTRAS src/cyc_extras.c src/zelda_voxel.c src/zelda_world.c src/zelda_world_canvas.c src/zelda_world_rooms.c src/zelda_voxel_plugin.c
+            HOST_EXTRAS src/cyc_extras.c src/zelda_voxel.c src/zelda_world.c src/zelda_world_canvas.c
+                src/zelda_world_rooms.c src/zelda_voxel_plugin.c src/zelda_quick_items.c
                 "${NESRECOMP_ROOT}/runner/cyc/cyc_presentation.c"
                 "${NESRECOMP_ROOT}/runner/src/voxel_renderer.c"
                 "${NESRECOMP_ROOT}/runner/src/voxel_screen_profile.c"

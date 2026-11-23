@@ -6,7 +6,7 @@
 # header is recorded by the build (CYC_PROJECT_LAUNCHER_SHA256).
 #
 # The translation, font and text reinsertion live in the cartridge's data
-# banks: every executable region this profile pins down (the seven
+# banks: every executable region this profile pins down (the
 # [[mod_function_hook]] signatures below, the SRAM-mapped startup copy and the
 # interpreter seed list) is byte-identical to the USA PRG0 image, so the USA
 # profile's discovery inputs stay valid for this image. Verified at configure
@@ -59,3 +59,8 @@ bytes = "A5 53 D0 22 A5 98"
 id = "zelda.world.sprite-reset"
 addr = 0x6E1D
 bytes = "A2 60 A9 F8 9D 00 02 E8 E8 E8 E8 E0 00 D0 F5 AD"
+
+[[mod_function_hook]]
+id = "zelda.remastered.quick-items"
+addr = 0xEC1B
+bytes = "A5 3C D0 D9 AD 1E 05 F0 08 A9"

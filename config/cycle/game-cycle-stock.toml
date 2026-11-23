@@ -46,3 +46,8 @@ bytes = "A5 53 D0 22 A5 98"
 id = "zelda.world.sprite-reset"
 addr = 0x6E1D
 bytes = "A2 60 A9 F8 9D 00 02 E8 E8 E8 E8 E0 00 D0 F5 AD"
+
+[[mod_function_hook]]
+id = "zelda.remastered.quick-items"
+addr = 0xEC1B
+bytes = "A5 3C D0 D9 AD 1E 05 F0 08 A9"
