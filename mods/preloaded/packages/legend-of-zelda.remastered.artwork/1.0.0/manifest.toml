@@ -1,0 +1,25 @@
+format_version = 1
+id = "legend-of-zelda.remastered.artwork"
+version = "1.0.0"
+name = "Zelda Remastered Artwork"
+description = "Use the Remastered artwork by Aclectico, KYA and their contributors with the original Zelda gameplay and soundtrack."
+resolver = "declarative"
+
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "3fe272fb"
+
+[[feature]]
+id = "hd-artwork"
+name = "Zelda Remastered Artwork"
+group = "Display"
+default_enabled = false
+exclusive_group = "display-mode"
+
+[[hd_pack]]
+feature = "hd-artwork"
+source = "mesen"
+resource_id = "source-pack"
+label = "Zelda Remastered v1.3 download"
+description = "Select your original Zelda Remastered v1.3 ZIP."
+artwork_provider = "legend-of-zelda.remastered.artwork"
