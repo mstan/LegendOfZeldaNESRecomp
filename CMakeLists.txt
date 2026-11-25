@@ -3,7 +3,7 @@ project(LegendOfZeldaNESRecomp C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-set(NESRECOMP_GAME_VERSION "1.12.3" CACHE STRING "Game release version")
+set(NESRECOMP_GAME_VERSION "1.12.4" CACHE STRING "Game release version")
 
 set(NESRECOMP_ROOT "${CMAKE_SOURCE_DIR}/nesrecomp" CACHE PATH
     "Path to the NESRecomp source tree")
@@ -25,12 +25,9 @@ set(NESRECOMP_ENABLE_MODS ON CACHE BOOL
 set(NESRECOMP_BACKEND "cycle" CACHE STRING "CPU backend: cycle or legacy")
 set_property(CACHE NESRECOMP_BACKEND PROPERTY STRINGS cycle legacy)
 # Qualified Windows x64 renderer default; explicit cache choices remain honored.
-if(WIN32 AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND
-   CMAKE_SYSTEM_PROCESSOR MATCHES "^(AMD64|amd64|x86_64|X86_64)$")
-    set(NESRECOMP_PPU_IMPL "FRAME" CACHE STRING "PPU implementation: LLE, HLE or FRAME")
-    option(NESRECOMP_APU_OPERATION "Use the native APU operation profile" OFF)
-    option(NESRECOMP_NATIVE_WAIT_LOOPS "Use qualified native wait operations" ON)
-endif()
+set(NESRECOMP_PPU_IMPL "HLE" CACHE STRING "PPU implementation: LLE, HLE or FRAME")
+option(NESRECOMP_APU_OPERATION "Use the native APU operation profile" ON)
+option(NESRECOMP_NATIVE_WAIT_LOOPS "Use qualified native wait operations" ON)
 if(NESRECOMP_BACKEND STREQUAL "cycle")
     set(NESRECOMP_ROM "" CACHE FILEPATH "Original Zelda USA PRG0 ROM, not distributed")
     set(NESRECOMP_HOST_COMPILER "" CACHE FILEPATH "Optional prebuilt compiler")
@@ -186,7 +183,7 @@ bool cyc_game_image_accepted(uint32_t prg_hash) {
             BOXART "${CMAKE_CURRENT_SOURCE_DIR}/assets/boxart.tga"
             HOST_EXTRAS src/cyc_extras.c src/zelda_voxel.c src/zelda_world.c src/zelda_world_canvas.c
                 src/zelda_world_rooms.c src/zelda_voxel_plugin.c src/zelda_quick_items.c
-                src/zelda_remastered_artwork.c
+                src/zelda_remastered_artwork.c src/zelda_remastered_audio.c
                 "${NESRECOMP_ROOT}/runner/cyc/cyc_presentation.c"
                 "${NESRECOMP_ROOT}/runner/src/voxel_renderer.c"
                 "${NESRECOMP_ROOT}/runner/src/voxel_screen_profile.c"

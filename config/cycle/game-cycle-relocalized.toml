@@ -64,3 +64,38 @@ bytes = "A2 60 A9 F8 9D 00 02 E8 E8 E8 E8 E0 00 D0 F5 AD"
 id = "zelda.remastered.quick-items"
 addr = 0xEC1B
 bytes = "A5 3C D0 D9 AD 1E 05 F0 08 A9"
+
+[[mod_function_hook]]
+id = "zelda.remastered.audio-mode"
+addr = 0x9825
+bytes = "A5 E0 F0 0C A9 00 8D 15 40"
+
+[[mod_function_hook]]
+id = "zelda.remastered.audio-effect0"
+addr = 0x9AE7
+bytes = "8D 07 06 A0 00 C8 4A 90 FC"
+
+[[mod_function_hook]]
+id = "zelda.remastered.audio-effect1"
+addr = 0x98D3
+bytes = "C9 40 D0 0B AE 05 06 F0 06"
+
+[[mod_function_hook]]
+id = "zelda.remastered.audio-effect2"
+addr = 0x99A5
+bytes = "AD 06 06 4E 03 06 B0 E5"
+
+[[mod_function_hook]]
+id = "zelda.remastered.audio-effect4"
+addr = 0x9B85
+bytes = "AD 01 06 30 29 D0 23 AD"
+
+[[mod_function_hook]]
+id = "zelda.remastered.audio-music"
+addr = 0x9C76
+bytes = "8D 09 06 30 18 C9 06 D0 04"
+
+[[mod_function_hook]]
+id = "zelda.remastered.audio-stop"
+addr = 0x9D46
+bytes = "A9 00 8D 09 06 8D 15 40"
