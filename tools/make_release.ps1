@@ -154,6 +154,9 @@ foreach ($target in $variants) {
         $readme = @'
 The Legend of Zelda - USA/NTSC cycle preview
 
+v1.12.4 adds original-ZIP HD import with optional replacement music/effects
+and corrects overlapping backgrounds during vertical room transitions.
+
 v1.12.1 fixes Player 1 keyboard remaps entered in the launcher.
 They are now saved in the active game settings and used during gameplay.
 
@@ -188,12 +191,15 @@ Supply your own ROM. The stock USA PRG0 image (payload CRC32 3fe272fb) runs
 compiled code. The alternate images listed in docs/ROM_HEADERS.md run on the
 cycle-accurate interpreter. Available Mods depend on the selected image.
 
-Remastered is a Mod for the stock ROM. Make a local .nesmod from an existing
-Remastered pack and your stock ROM with:
-python tools/import_hdpack.py --pack "path/to/pack" --rom "path/to/stock.nes" --out "Zelda-Remastered.nesmod"
-Install it in Mods, then enable Zelda Remastered HD before Play. The shared
-framework verifies and applies its IPS in memory. Original files stay intact.
-Remastered replacement audio is not implemented; the original NES APU plays.
+Use the original USA PRG0 ROM. In Mods, enable Zelda Remastered HD, choose
+Select file, and select your original Zelda Remastered v1.3 ZIP download.
+The application validates and imports it automatically; no manual extraction
+or modified cartridge file is needed. Creator notices remain with the import.
+Replacement music and sound is enabled within HD; turn it off to keep the
+original NES soundtrack with the artwork. Imported audio uses mono output.
+This mode preserves original-cartridge gameplay and does not claim every
+Remastered IPS gameplay change. The optional Select B-item cycling mod is
+separate. Disable HD and restart to return to another presentation.
 
 Arrow keys: D-pad. Z: A. X: B. Enter: Start. Backslash: Select.
 Escape: menu/settings. Hold Tab: fast-forward. F7: state slots. F8: rewind.
@@ -206,7 +212,7 @@ Stock's Voxel 3D and first-person packages are disabled by default and mutually
 exclusive. Numpad 0 toggles the view; 8/2 pitch, 4/6 yaw, 7/9 roll, +/- zoom,
 1/3 sprite scale and 5 resets the camera. First-person movement follows the
 camera; the right stick looks. HD is mutually exclusive with voxel views. Disable HD in the launcher and
-restart to return to stock. Save states require matching pack assets/patch.
+restart to return to stock. Save states require matching selected assets and mod options.
 These builds are development previews. Read docs/CYCLE-MIGRATION.md for coverage
 and existing presentation limitations.
 

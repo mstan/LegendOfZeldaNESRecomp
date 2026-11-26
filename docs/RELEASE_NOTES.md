@@ -1,3 +1,19 @@
+# v1.12.4 ? Native Remastered import and room scrolling
+
+Select the original Zelda Remastered v1.3 ZIP in **Mods > Zelda Remastered
+HD**. The application imports its artwork and optional replacement music and
+effects. Turn **Replacement music and sound** off to retain the original NES
+soundtrack with HD artwork. The imported soundtrack uses mono output.
+
+Vertical room transitions use the recorded nametable coordinates and the
+first matching authored background at each priority. A fixed HUD keeps its
+position while the room scenery scrolls beneath it.
+
+Use the original USA PRG0 cartridge image; it stays unchanged on disk. This
+mode retains original-cartridge gameplay and does not claim all gameplay
+changes from the Remastered IPS. The optional Select B-item cycling mod is
+separate. Native saves and existing explicit settings retain their behavior.
+
 # v1.12.1 ? Player 1 keyboard remapping
 
 Keyboard changes captured in the launcher now persist across restarts and
