@@ -29,7 +29,7 @@ The complete dispatch function coverage was made possible by the [zelda1-disasse
 
 ## Quick Start
 
-1. Download `LegendOfZeldaNESRecomp-windows-x64.zip` from [Releases](../../releases)
+1. Download `LegendOfZeldaNESRecomp-USA-NTSC-cycle-mods-preview-windows-x64.zip` from [Releases](../../releases)
 2. Extract and run `LegendOfZeldaNESRecomp.exe`
 3. Select your Legend of Zelda (USA) ROM when prompted — the path is saved for future launches
 
@@ -105,22 +105,22 @@ See [diagnostic instructions](docs/DIAGNOSTICS.md).
 
 ## Zelda Remastered HD Mod
 
-The cycle build uses the original USA PRG0 ROM for every presentation mode.
-Remastered is installed and selected through **Mods** in the same executable.
-Create a local package from your existing Mesen pack:
+Use your original USA PRG0 ROM. In the launcher's **Mods** page, enable
+**Zelda Remastered HD**, choose **Select file**, and select your original
+Zelda Remastered v1.3 ZIP download. The application validates and imports the
+artwork and audio itself; no manual extraction or cartridge modification is
+needed. The creator's notice is retained in the local import.
 
-```sh
-python tools/import_hdpack.py --pack "/path/to/pack" --rom "/path/to/Legend of Zelda.NES" --out "Zelda-Remastered.nesmod"
-```
+HD is disabled by default and shares the presentation exclusion group with
+Seamless Overworld and voxel views. **Replacement music and sound** is on by
+default within HD; turn it off to retain the original NES soundtrack while
+keeping the artwork. Imported audio uses the existing mono output.
 
-Install that archive in the launcher's Mods page, then enable **Zelda Remastered
-HD** before starting. It is disabled by default and shares an exclusion group
-with voxel views. The framework verifies the pack's IPS and applies it to an
-in-memory cartridge copy; your ROM stays unchanged. The included pack creator
-notice is preserved. Texture/background presentation uses the original PPU;
-replacement music and sound files remain unsupported. To return to stock,
-disable the feature in the launcher and restart. Pack/patch selection is
-read-only during gameplay, and save states require matching assets and options.
+This mode preserves original-cartridge gameplay with optional artwork/audio.
+It does not implement every gameplay change in the pack's Remastered IPS.
+The separate optional **Select B-item cycling** mod cycles owned items.
+Disable HD and restart to return to another presentation. Current-build save
+states require the same selected assets and mod options.
 
 With Remastered enabled, choose **Graphics → HD resolution** in the in-game
 settings. **Pack resolution** keeps the pack's original size; you can also choose
@@ -293,7 +293,7 @@ The original 6502 code is translated to cycle-aware C and compiled to native cod
 
 ## Known Limitations
 
-- Remastered preserves the existing sampler limitations for unsupported conditions or missing images. HD-pack replacement music and sound files remain unsupported.
+- Remastered retains sampler limitations for unsupported conditions or missing images. Imported replacement music and effects use mono output; complete Remastered IPS gameplay changes are not claimed.
 - Legacy binary save states do not transfer to the cycle backend. Raw battery progress remains portable.
 - Voxel views retain their existing experimental camera and geometry limitations.
 - Seamless Overworld remains experimental; its current limitations are listed above.

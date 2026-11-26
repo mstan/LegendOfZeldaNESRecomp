@@ -1,0 +1,17 @@
+format_version = 1
+id = "legend-of-zelda.remastered.quick-items"
+version = "1.0.0"
+name = "Quick B item selection"
+description = "Press Select to cycle through your usable B items during play."
+resolver = "declarative"
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "3fe272fb"
+[[feature]]
+id = "quick-items"
+name = "Quick B item selection"
+group = "Controls"
+default_enabled = false
+[[plugin]]
+feature = "quick-items"
+id = "legend-of-zelda.remastered.quick-items"

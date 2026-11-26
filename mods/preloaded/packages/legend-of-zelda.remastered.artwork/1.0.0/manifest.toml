@@ -1,0 +1,40 @@
+format_version = 1
+id = "legend-of-zelda.remastered.artwork"
+version = "1.0.0"
+name = "Zelda Remastered HD"
+description = "Use the Remastered artwork by Aclectico, KYA and their contributors with original Zelda gameplay and optional replacement music and sound."
+resolver = "declarative"
+
+[[target]]
+game_id = "legend-of-zelda-us"
+rom_crc32 = "3fe272fb"
+
+[[feature]]
+id = "hd-artwork"
+name = "Zelda Remastered HD"
+group = "Display"
+default_enabled = false
+exclusive_group = "display-mode"
+
+[[hd_pack]]
+feature = "hd-artwork"
+source = "mesen"
+resource_id = "source-pack"
+label = "Zelda Remastered v1.3 download"
+description = "Select your original Zelda Remastered v1.3 ZIP."
+artwork_provider = "legend-of-zelda.remastered.artwork"
+
+[[plugin]]
+feature = "hd-artwork"
+id = "legend-of-zelda.remastered.audio"
+when_option = "replacement-audio"
+when_value = "true"
+
+[[option]]
+feature = "hd-artwork"
+id = "replacement-audio"
+label = "Replacement music and sound"
+description = "Use music and effects from your selected Remastered download. Turn off to keep the original NES soundtrack."
+group = "Audio"
+type = "boolean"
+default = true
