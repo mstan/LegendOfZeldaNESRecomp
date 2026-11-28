@@ -4,6 +4,7 @@
 #>
 param([string]$Rom, [string]$Variant, [switch]$SkipBuild, [string]$BuildDirectory, [string]$OutputDirectory)
 $ErrorActionPreference = 'Stop'
+. (Join-Path $PSScriptRoot '../nesrecomp/tools/release_windows_common.ps1')
 $root = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $build = if ($BuildDirectory) { [IO.Path]::GetFullPath($BuildDirectory) } else { Join-Path $root 'build-cycle' }
 $out = if ($OutputDirectory) { [IO.Path]::GetFullPath($OutputDirectory) } else { Join-Path $root 'release' }
@@ -48,109 +49,31 @@ if (-not $SkipBuild) {
     $cmake = Get-CacheValue 'CMAKE_COMMAND'
     if (-not $cmake) { $cmake = 'C:\Program Files\CMake\bin\cmake.exe' }
     if (-not (Test-Path -LiteralPath $cmake)) { $cmake = (Get-Command cmake.exe -ErrorAction Stop).Source }
-    $args = @('-S', $root, '-B', $build, '-DNESRECOMP_BACKEND=cycle', "-DNESRECOMP_ROM=$Rom")
-    # Cartridge profile (config/cycle/game-cycle-<variant>.toml); the default
-    # stock profile comes from the project, so only pass an explicit choice.
-    if (-not $Variant) { $Variant = Get-CacheValue 'ZELDA_ROM_VARIANT' }
-    if ($Variant) { $args += "-DZELDA_ROM_VARIANT=$Variant" }
-    Invoke-HiddenBuild $cmake $args
-    Invoke-HiddenBuild $cmake @('--build', $build, '--config', 'Release')
+    $engine=Get-CacheValue 'NESRECOMP_ROOT'
+    if (-not $engine) { $engine=Join-Path $root 'nesrecomp' }
+    $ui=Get-CacheValue 'NESRECOMP_RECOMP_UI'
+    & (Join-Path $engine 'tools/build_cycle_windows.ps1') -ProjectRoot $root -Rom $Rom -BuildDir $build -EngineRoot $engine -RecompUi $ui
     $cache = Get-Content -LiteralPath $cachePath -Raw
 }
 if ((Get-CacheValue 'NESRECOMP_BACKEND') -ne 'cycle') { throw 'Refusing to package a legacy build.' }
 $bin = if (Test-Path -LiteralPath (Join-Path $build 'Release\LegendOfZeldaNESRecomp.exe')) { Join-Path $build 'Release' } else { $build }
 New-Item -ItemType Directory -Force -Path $out | Out-Null
-$variants = @('LegendOfZeldaNESRecomp')
-foreach ($target in $variants) {
-    foreach ($dependency in "$target.exe", 'SDL2.dll', 'assets') {
-        if (-not (Test-Path -LiteralPath (Join-Path $bin $dependency))) { throw "Missing release dependency: $dependency" }
-    }
-    $stage = Join-Path $out ('stage-' + [guid]::NewGuid().ToString('N'))
-    New-Item -ItemType Directory -Path $stage | Out-Null
-    try {
-        foreach ($file in "$target.exe", 'SDL2.dll') { Copy-Item -LiteralPath (Join-Path $bin $file) -Destination $stage }
-        $compiler = Get-CacheValue 'CMAKE_C_COMPILER'
-        $mingw = [IO.Path]::GetFileName($compiler) -match '(^|-)gcc(?:-[0-9.]+)?\.exe$'
-        foreach ($dll in 'libgcc_s_seh-1.dll', 'libstdc++-6.dll', 'libwinpthread-1.dll') {
-            $runtime = Join-Path $bin $dll
-            if (-not (Test-Path -LiteralPath $runtime) -and $mingw) {
-                $runtime = Join-Path (Split-Path -Parent $compiler) $dll
-            }
-            if (Test-Path -LiteralPath $runtime) { Copy-Item -LiteralPath $runtime -Destination $stage }
-            elseif ($mingw) { throw "Missing MinGW runtime dependency: $dll" }
-        }
-        Copy-Item -LiteralPath (Join-Path $bin 'assets') -Recurse -Destination (Join-Path $stage 'assets')
-        Copy-Item -LiteralPath (Join-Path $root 'mods\preloaded') -Recurse -Destination (Join-Path $stage 'mods')
-        foreach ($packageId in 'nesrecomp.developer.replay', 'nesrecomp.twitch-chat') {
-            $generated = Join-Path $bin "mods/packages/$packageId/1.0.0/manifest.toml"
-            if (-not (Test-Path -LiteralPath $generated -PathType Leaf)) { throw "Missing generated framework manifest: $packageId" }
-            $destination = Join-Path $stage "mods/packages/$packageId/1.0.0"
-            New-Item -ItemType Directory -Path $destination | Out-Null
-            Copy-Item -LiteralPath $generated -Destination $destination
-        }
-        New-Item -ItemType Directory -Path (Join-Path $stage 'tools') | Out-Null
-        New-Item -ItemType Directory -Path (Join-Path $stage 'hdpatch') | Out-Null
-        Copy-Item -LiteralPath (Join-Path $root 'tools\import_hdpack.py') -Destination (Join-Path $stage 'tools')
-        $framework = Get-CacheValue 'NESRECOMP_ROOT'
-        if (-not $framework) { $framework = Join-Path $root 'nesrecomp' }
-        Copy-Item -LiteralPath (Join-Path $framework 'tools\package_hdpack.py') -Destination (Join-Path $stage 'tools')
-        Copy-Item -LiteralPath (Join-Path $root 'hdpatch\ZeldaRemasteredReadme.txt') -Destination (Join-Path $stage 'hdpatch')
-        foreach ($doc in 'README.md', 'LICENSE', 'PERMISSIONS.md') { Copy-Item -LiteralPath (Join-Path $root $doc) -Destination $stage }
-        $ui = Get-CacheValue 'NESRECOMP_RECOMP_UI'
-        if (-not $ui) { $ui = Get-CacheValue 'RECOMP_UI_ROOT' }
-        if (-not $ui) { $ui = Join-Path $root 'recomp-ui' }
-        $licenses = @{
-            'Game-LICENSE.txt' = (Join-Path $root 'LICENSE')
-            'Game-PERMISSIONS.md' = (Join-Path $root 'PERMISSIONS.md')
-            'NESRecomp-LICENSE.txt' = (Join-Path $framework 'LICENSE')
-            'SDL2-COPYING.txt' = (Join-Path $framework 'runner/external/SDL2/COPYING.txt')
-            'ImGui-LICENSE.txt' = (Join-Path $ui 'src/third_party/imgui/LICENSE.txt')
-            'RecompUI-LICENSE.txt' = (Join-Path $ui 'LICENSE')
-            'LatoLatin-OFL.txt' = (Join-Path $framework 'tools/release-licenses/LatoLatin-OFL.txt')
-            'NotoSansSymbols2-OFL.txt' = (Join-Path $framework 'tools/release-licenses/NotoSansSymbols2-OFL.txt')
-            'OpenMoji-LICENSE.txt' = (Join-Path $framework 'tools/release-licenses/OpenMoji-LICENSE.txt')
-        }
-        foreach ($dependency in @(
-            @{ Cache = 'recomp_net_SOURCE_DIR'; Notice = 'RecompNet-LICENSE.txt' },
-            @{ Cache = 'retcomm_rbengine_SOURCE_DIR'; Notice = 'RBEngine-LICENSE.txt' }
-        )) {
-            $configured = Get-CacheValue $dependency.Cache
-            if ($configured) { $licenses[$dependency.Notice] = Join-Path $configured 'LICENSE' }
-        }
-        if (Test-Path -LiteralPath (Join-Path $stage 'libstdc++-6.dll')) {
-            $compilerPrefix = Split-Path -Parent (Split-Path -Parent (Get-CacheValue 'CMAKE_CXX_COMPILER'))
-            foreach ($name in 'COPYING.LIB', 'COPYING.RUNTIME', 'COPYING3', 'README') {
-                $licenses["GCC-$name.txt"] = Join-Path $compilerPrefix "share/licenses/gcc-libs/$name"
-            }
-            $licenses['libwinpthread-COPYING.txt'] = Join-Path $compilerPrefix 'share/licenses/libwinpthread/COPYING'
-        }
-        New-Item -ItemType Directory -Path (Join-Path $stage 'licenses') | Out-Null
-        foreach ($name in $licenses.Keys) {
-            if (-not (Test-Path -LiteralPath $licenses[$name])) { throw "Missing license: $($licenses[$name])" }
-            Copy-Item -LiteralPath $licenses[$name] -Destination (Join-Path $stage "licenses/$name")
-        }
-        New-Item -ItemType Directory -Path (Join-Path $stage 'docs\assets') | Out-Null
-        foreach ($doc in 'CYCLE-MIGRATION.md', 'RELEASE_NOTES.md', 'DIAGNOSTICS.md', 'SEAMLESS-WORLD.md', 'ROM_HEADERS.md') {
-            Copy-Item -LiteralPath (Join-Path $root "docs\$doc") -Destination (Join-Path $stage 'docs')
-        }
-        foreach ($image in 'seamless-overworld.png', 'seamless-dungeon.png', 'seamless-atlas.png', 'voxel-3d.webp') {
-            Copy-Item -LiteralPath (Join-Path $root "docs\assets\$image") -Destination (Join-Path $stage 'docs\assets')
-        }
-        $symbolFile = Join-Path $bin "$target.pdb"
-        $splitSymbols = $false
-        if (-not (Test-Path -LiteralPath $symbolFile)) {
-            $objcopy = Get-CacheValue 'CMAKE_OBJCOPY'
-            if (-not $objcopy -or -not (Test-Path -LiteralPath $objcopy) -or
-                (Get-CacheValue 'CMAKE_C_FLAGS_RELEASE') -notmatch '(?<!\S)-g\d*(?!\S)') {
-                throw 'Build with matching PDBs or GNU debug information before packaging.'
-            }
-            $symbolFile = Join-Path $out "$target.exe.debug"
-            $splitSymbols = $true
-            $stagedExe = Join-Path $stage "$target.exe"
-            Invoke-HiddenBuild $objcopy @('--only-keep-debug', $stagedExe, $symbolFile)
-            Invoke-HiddenBuild $objcopy @('--strip-debug', $stagedExe)
-            Invoke-HiddenBuild $objcopy @("--add-gnu-debuglink=$symbolFile", $stagedExe)
-        }
+$target='LegendOfZeldaNESRecomp'
+$framework=Get-CacheValue 'NESRECOMP_ROOT'
+if (-not $framework) { $framework=Join-Path $root 'nesrecomp' }
+foreach ($packageId in 'nesrecomp.developer.replay','nesrecomp.twitch-chat') {
+    if (-not (Test-Path -LiteralPath (Join-Path $bin "mods/packages/$packageId/1.0.0/manifest.toml"))) { throw "Missing generated framework manifest: $packageId" }
+}
+$symbolFile=Join-Path $bin "$target.pdb"
+$splitSymbols=$false
+if (-not (Test-Path -LiteralPath $symbolFile)) {
+    $objcopy=Get-CacheValue 'CMAKE_OBJCOPY'
+    if (-not $objcopy -or -not (Test-Path -LiteralPath $objcopy) -or
+        (Get-CacheValue 'CMAKE_C_FLAGS_RELEASE') -notmatch '(?<!\S)-g\d*(?!\S)') { throw 'Build with matching PDBs or GNU debug information before packaging.' }
+    $symbolFile=Join-Path $out "$target.exe.debug"
+    $splitSymbols=$true
+    Invoke-HiddenBuild $objcopy @('--only-keep-debug',(Join-Path $bin "$target.exe"),$symbolFile)
+}
         $readme = @'
 The Legend of Zelda - USA/NTSC cycle preview
 
@@ -221,31 +144,31 @@ then click PLAY and reproduce the issue. Share the newest .log and matching
 .dmp, if present, from the diagnostics folder beside the program. Disable the
 mod after testing. See docs/DIAGNOSTICS.md for fallback storage and privacy details.
 '@
-        [IO.File]::WriteAllText((Join-Path $stage 'README.txt'), $readme, [Text.Encoding]::UTF8)
-        $forbidden = @(Get-ChildItem -LiteralPath $stage -File -Recurse | Where-Object {
-            $_.Extension -in '.nes', '.srm', '.sav', '.state', '.cycstate', '.log', '.dmp' -or
-            $_.Name -in 'config.ini', 'keybinds.ini', 'debug.ini', 'rom.cfg', 'state.toml', 'hires.txt'
-        })
-        if ($forbidden.Count) { throw 'Player/debug/third-party data found in staging.' }
-        $zip = Join-Path $out "$target-USA-NTSC-cycle-mods-preview-windows-x64.zip"
-        if (Test-Path -LiteralPath $zip) { Remove-Item -LiteralPath $zip }
-        Compress-Archive -Path (Join-Path $stage '*') -DestinationPath $zip
-        Write-Host "Created local preview: $zip"
-        Write-Host "SHA256: $((Get-FileHash -LiteralPath $zip -Algorithm SHA256).Hash)"
-        $symbols = Join-Path $out "$target-windows-x64-symbols.zip"
-        if (Test-Path -LiteralPath $symbols) { Remove-Item -LiteralPath $symbols }
-        Compress-Archive -LiteralPath $symbolFile -DestinationPath $symbols
-        Write-Host "Created matching crash symbols: $symbols"
-        if ($splitSymbols) { Remove-Item -LiteralPath $symbolFile -ErrorAction Stop }
-    } finally {
-        $stageAbsolute = [IO.Path]::GetFullPath($stage)
-        $outPrefix = [IO.Path]::GetFullPath($out).TrimEnd('\') + '\'
-        if (-not $stageAbsolute.StartsWith($outPrefix, [StringComparison]::OrdinalIgnoreCase)) { throw "Refusing cleanup outside release directory: $stageAbsolute" }
-        $contents = @(Get-ChildItem -LiteralPath $stageAbsolute -Recurse -Force)
-        if (((Get-Item -LiteralPath $stageAbsolute).Attributes -band [IO.FileAttributes]::ReparsePoint) -or
-            @($contents | Where-Object { ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -or $_.Name -in '.git', '.hg', '.svn' }).Count) {
-            throw "Unexpected link or repository in owned release staging: $stageAbsolute"
-        }
-        Remove-Item -LiteralPath $stageAbsolute -Recurse -ErrorAction Stop
+$extra=@{
+    'tools/import_hdpack.py'=(Join-Path $root 'tools/import_hdpack.py')
+    'tools/package_hdpack.py'=(Join-Path $framework 'tools/package_hdpack.py')
+    'hdpatch/ZeldaRemasteredReadme.txt'=(Join-Path $root 'hdpatch/ZeldaRemasteredReadme.txt')
+    'licenses/Game-PERMISSIONS.md'=(Join-Path $root 'PERMISSIONS.md')
+}
+foreach ($doc in 'README.md','LICENSE','PERMISSIONS.md') { $extra[$doc]=Join-Path $root $doc }
+foreach ($doc in 'CYCLE-MIGRATION.md','RELEASE_NOTES.md','DIAGNOSTICS.md','SEAMLESS-WORLD.md','ROM_HEADERS.md') { $extra["docs/$doc"]=Join-Path $root "docs/$doc" }
+foreach ($image in 'seamless-overworld.png','seamless-dungeon.png','seamless-atlas.png','voxel-3d.webp') { $extra["docs/assets/$image"]=Join-Path $root "docs/assets/$image" }
+$stageHook={
+    param($stage,$bin)
+    if ($splitSymbols) {
+        $stagedExe=Join-Path $stage "$target.exe"
+        Invoke-HiddenBuild $objcopy @('--strip-debug',$stagedExe)
+        Invoke-HiddenBuild $objcopy @("--add-gnu-debuglink=$symbolFile",$stagedExe)
     }
+}
+$check={param($stage)
+    if (Get-ChildItem -LiteralPath $stage -File -Recurse | Where-Object Name -eq 'hires.txt') { throw 'Third-party pack data found in staging.' }
+}
+try {
+    & (Join-Path $framework 'tools/package_cycle_windows.ps1') -ProjectRoot $root -Target $target -Title 'The Legend of Zelda' -BuildDir $build -OutputDirectory $out -SkipBuild -ArchiveName "$target-USA-NTSC-cycle-mods-preview-windows-x64.zip" -ReadmeText $readme -AdditionalFiles $extra -StageHook $stageHook -ValidateStage $check
+    $symbols=Join-Path $out "$target-windows-x64-symbols.zip"
+    if (Test-Path -LiteralPath $symbols) { Remove-Item -LiteralPath $symbols }
+    Compress-Archive -LiteralPath $symbolFile -DestinationPath $symbols
+} finally {
+    if ($splitSymbols -and (Test-Path -LiteralPath $symbolFile)) { Remove-Item -LiteralPath $symbolFile -ErrorAction Stop }
 }
